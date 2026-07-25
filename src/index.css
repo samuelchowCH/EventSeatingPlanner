@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Space+Mono&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, Cambria, serif;
+  --font-mono: "Space Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-gilded-bg: #FAF7F2;
+  --color-gilded-ink: #2C2C2C;
+  --color-gilded-accent: #C9A96E;
+  --color-gilded-accent-muted: #E5D5B8;
+  --color-gilded-border: rgba(201, 169, 110, 0.25);
+  --color-gilded-faint: rgba(44, 44, 44, 0.05);
+}
+
+html {
+  overflow-y: scroll;
+}
+
+/* Base styles to apply global color styling and typography */
+body {
+  background-color: var(--color-gilded-bg);
+  color: var(--color-gilded-ink);
+  font-family: var(--font-sans);
+}
+
+/* Hide empty seating locations during floorplan PDF and JPEG export */
+.is-exporting .empty-chair-container {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Fix html2canvas flexbox justify-between shifting bug and transitions */
+.is-exporting {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  transition: none !important;
+  border: none !important;
+  border-width: 0px !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.is-exporting * {
+  transition: none !important;
+}
+
+.is-exporting .print-layout-target {
+  margin-top: 16px !important;
+  margin-bottom: auto !important;
+}
+

@@ -1,0 +1,6 @@
+{
+  "name": "Seating Planner",
+  "description": "Generate, visualize, and customize table seating plans from CSV or Excel uploads, and export the layout as a printable PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
