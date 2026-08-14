@@ -181,16 +181,16 @@ function Toast({ message, type, onClose }: ToastProps) {
   }, [onClose]);
 
   const colours = {
-    success: 'bg-emerald-900/90 border-emerald-600 text-emerald-100',
-    error:   'bg-red-900/90 border-red-600 text-red-100',
-    info:    'bg-blue-900/90 border-blue-600 text-blue-100',
+    success: 'bg-emerald-950/95 border-emerald-500 text-emerald-100',
+    error:   'bg-red-950/95 border-red-500 text-red-100',
+    info:    'bg-gilded-ink border-gilded-accent text-gilded-bg',
   };
 
   return (
     <div
       role="alert"
       aria-live="assertive"
-      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-sm font-medium max-w-sm animate-slide-up ${colours[type]}`}
+      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-none border shadow-2xl backdrop-blur-md text-xs font-mono max-w-sm animate-slide-up ${colours[type]}`}
     >
       {type === 'success' && <Check size={16} className="shrink-0" />}
       {type === 'error'   && <AlertCircle size={16} className="shrink-0" />}
@@ -199,7 +199,7 @@ function Toast({ message, type, onClose }: ToastProps) {
       <button
         onClick={onClose}
         aria-label="Dismiss notification"
-        className="ml-1 opacity-70 hover:opacity-100 transition-opacity"
+        className="ml-1 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
       >
         <X size={14} />
       </button>
@@ -211,7 +211,7 @@ function Toast({ message, type, onClose }: ToastProps) {
 
 function StepIndicator({ current, total, labels }: { current: number; total: number; labels: string[] }) {
   return (
-    <nav aria-label="Wizard steps" className="flex items-center justify-center gap-1 flex-wrap">
+    <nav aria-label="Wizard steps" className="flex items-center justify-center gap-1 flex-wrap font-mono">
       {Array.from({ length: total }, (_, i) => {
         const step = i + 1;
         const done = step < current;
@@ -221,19 +221,19 @@ function StepIndicator({ current, total, labels }: { current: number; total: num
             <div className="flex flex-col items-center gap-1">
               <div
                 aria-current={active ? 'step' : undefined}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300
-                  ${done   ? 'bg-emerald-500 border-emerald-500 text-white' : ''}
-                  ${active ? 'bg-violet-600 border-violet-400 text-white shadow-lg shadow-violet-500/30' : ''}
-                  ${!done && !active ? 'bg-gray-800 border-gray-600 text-gray-400' : ''}`}
+                className={`w-8 h-8 rounded-none flex items-center justify-center text-xs font-bold border transition-all duration-300
+                  ${done   ? 'bg-emerald-700 border-emerald-500 text-white' : ''}
+                  ${active ? 'bg-gilded-accent border-gilded-accent text-gilded-ink font-extrabold shadow-sm' : ''}
+                  ${!done && !active ? 'bg-gray-100 border-gray-300 text-gray-400' : ''}`}
               >
                 {done ? <Check size={12} /> : step}
               </div>
-              <span className={`text-xs hidden sm:block ${active ? 'text-violet-300 font-semibold' : done ? 'text-emerald-400' : 'text-gray-500'}`}>
+              <span className={`text-[10px] uppercase font-bold tracking-wider hidden sm:block ${active ? 'text-gilded-ink' : done ? 'text-emerald-700' : 'text-gray-400'}`}>
                 {labels[i]}
               </span>
             </div>
             {step < total && (
-              <div className={`h-0.5 w-6 sm:w-10 mb-4 transition-all duration-300 ${done ? 'bg-emerald-500' : 'bg-gray-700'}`} />
+              <div className={`h-0.5 w-5 sm:w-8 mb-4 transition-all duration-300 ${done ? 'bg-emerald-600' : 'bg-gray-200'}`} />
             )}
           </React.Fragment>
         );
@@ -256,13 +256,13 @@ interface FieldProps {
 function Field({ id, label, required, hint, error, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium text-gray-300">
-        {label}{required && <span className="text-red-400 ml-1" aria-hidden="true">*</span>}
+      <label htmlFor={id} className="text-xs font-bold text-gilded-ink font-mono uppercase tracking-wider">
+        {label}{required && <span className="text-red-600 ml-1" aria-hidden="true">*</span>}
       </label>
       {children}
-      {hint && !error && <p className="text-xs text-gray-500">{hint}</p>}
+      {hint && !error && <p className="text-xs text-gray-500 font-mono">{hint}</p>}
       {error && (
-        <p id={`${id}-error`} role="alert" className="text-xs text-red-400 flex items-center gap-1">
+        <p id={`${id}-error`} role="alert" className="text-xs text-red-600 font-bold flex items-center gap-1">
           <AlertCircle size={12} /> {error}
         </p>
       )}
@@ -270,8 +270,8 @@ function Field({ id, label, required, hint, error, children }: FieldProps) {
   );
 }
 
-const inputCls = `w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-100
-  placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent
+const inputCls = `w-full bg-white border border-gray-300 rounded-none px-3 py-2 text-xs font-sans text-gilded-ink
+  placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gilded-accent focus:border-gilded-accent
   transition-all duration-150`;
 
 const textareaCls = `${inputCls} resize-none`;
@@ -282,8 +282,8 @@ function Step1({ form, onChange, errors }: { form: WizardFormData; onChange: (k:
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-white">Event Basics</h2>
-        <p className="text-sm text-gray-400 mt-1">Give your event a name and tell us what kind of event it is.</p>
+        <h2 className="text-xl font-bold text-gilded-ink font-serif">Event Basics</h2>
+        <p className="text-xs text-gray-500 font-mono mt-1">Give your event a name and select its operational category.</p>
       </div>
       <Field id="wizard-name" label="Event Name" required error={errors.find(e => e.includes('name'))}>
         <input
@@ -308,10 +308,10 @@ function Step1({ form, onChange, errors }: { form: WizardFormData; onChange: (k:
               role="radio"
               aria-checked={form.eventType === type}
               onClick={() => onChange('eventType', type)}
-              className={`px-3 py-2 rounded-lg text-sm font-medium border-2 transition-all duration-150
+              className={`px-3 py-2.5 rounded-none text-xs font-bold font-serif border transition-all duration-150 cursor-pointer
                 ${form.eventType === type
-                  ? 'bg-violet-600 border-violet-400 text-white shadow-md shadow-violet-500/20'
-                  : 'bg-gray-800 border-gray-600 text-gray-300 hover:border-violet-500 hover:text-violet-300'}`}
+                  ? 'bg-gilded-ink border-gilded-ink text-gilded-accent shadow-xs'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-gilded-accent hover:text-gilded-ink'}`}
             >
               {type}
             </button>
@@ -326,8 +326,8 @@ function Step2({ form, onChange }: { form: WizardFormData; onChange: (k: keyof W
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-white">Date & Venue</h2>
-        <p className="text-sm text-gray-400 mt-1">All fields are optional — you can update these later.</p>
+        <h2 className="text-xl font-bold text-gilded-ink font-serif">Date & Venue</h2>
+        <p className="text-xs text-gray-500 font-mono mt-1">All fields are optional — you can update these later.</p>
       </div>
       <Field id="wizard-date" label="Event Date" hint="Used for display and sorting only.">
         <input
@@ -368,8 +368,8 @@ function Step3({ form, onChange, errors }: { form: WizardFormData; onChange: (k:
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-white">Event Background</h2>
-        <p className="text-sm text-gray-400 mt-1">These details help the AI generate better suggestions for you.</p>
+        <h2 className="text-xl font-bold text-gilded-ink font-serif">Event Background</h2>
+        <p className="text-xs text-gray-500 font-mono mt-1">These details help the AI generate tailored visual recommendations.</p>
       </div>
       <Field id="wizard-desc" label="Event Description" hint="A few sentences about the event atmosphere, theme, or style.">
         <textarea
@@ -422,28 +422,28 @@ function Step4({ form, onChange, onRequestAI, aiLoading, aiError }: Step4Props) 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-white">Visual Preferences</h2>
-        <p className="text-sm text-gray-400 mt-1">Choose your venue layout mode. Optionally let AI suggest a theme.</p>
+        <h2 className="text-xl font-bold text-gilded-ink font-serif">Visual Preferences</h2>
+        <p className="text-xs text-gray-500 font-mono mt-1">Choose your venue layout mode. Optionally let AI suggest a color scheme.</p>
       </div>
 
       {/* Arena mode */}
       <Field id="wizard-arena" label="Venue Layout Mode">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {(['dining', 'lecture'] as const).map(mode => (
             <button
               key={mode}
               type="button"
               onClick={() => onChange('arenaMode', mode)}
               aria-pressed={form.arenaMode === mode}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-150
+              className={`flex flex-col items-center gap-2 p-4 rounded-none border transition-all duration-150 cursor-pointer
                 ${form.arenaMode === mode
-                  ? 'bg-violet-600/20 border-violet-500 text-violet-300'
-                  : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-violet-600'}`}
+                  ? 'bg-gilded-ink border-gilded-ink text-gilded-accent shadow-xs'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-gilded-accent hover:text-gilded-ink'}`}
             >
               <span className="text-2xl">{mode === 'dining' ? '🍽️' : '🎓'}</span>
-              <span className="text-sm font-medium capitalize">{mode}</span>
-              <span className="text-xs text-center opacity-70">
-                {mode === 'dining' ? 'Round tables, banquet style' : 'Rows of seminar seats'}
+              <span className="text-xs font-serif font-bold uppercase tracking-wider">{mode === 'dining' ? 'Dining Banquet' : 'Lecture Seminar'}</span>
+              <span className="text-[10px] text-center font-mono opacity-80">
+                {mode === 'dining' ? 'Round tables & banquet configurations' : 'Podium-facing classroom rows'}
               </span>
             </button>
           ))}
@@ -451,27 +451,26 @@ function Step4({ form, onChange, onRequestAI, aiLoading, aiError }: Step4Props) 
       </Field>
 
       {/* AI recommendations */}
-      <div className="rounded-xl border border-dashed border-violet-700/50 bg-violet-950/20 p-4 space-y-3">
-        <div className="flex items-center gap-2 text-violet-300 text-sm font-semibold">
-          <Sparkles size={15} />
-          AI Theme Suggestions <span className="text-gray-500 font-normal">(optional)</span>
+      <div className="rounded-none border border-gilded-accent/50 bg-gilded-faint p-4 space-y-3">
+        <div className="flex items-center gap-2 text-gilded-ink text-xs font-bold font-serif uppercase tracking-wider">
+          <Sparkles size={14} className="text-gilded-accent" />
+          AI Theme Suggestions <span className="text-gray-400 font-normal font-mono lowercase">(optional)</span>
         </div>
-        <p className="text-xs text-gray-400">
-          Based on your event description and type, AI will suggest a color theme and layout defaults.
-          You can review them before applying.
+        <p className="text-xs text-gray-600 font-mono leading-relaxed">
+          Based on your event details, Gemini AI will recommend a color scheme and default layout setup.
         </p>
 
         {form.aiApplied && form.aiThemeName && (
-          <div className="rounded-lg bg-gray-800/80 border border-gray-700 p-3 space-y-2">
-            <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-              <Check size={12} /> Theme applied: <span className="text-white ml-1">{form.aiThemeName}</span>
+          <div className="rounded-none bg-white border border-gray-200 p-3 space-y-2">
+            <p className="text-xs font-bold font-serif text-emerald-800 flex items-center gap-1">
+              <Check size={13} /> Theme applied: <span className="text-gilded-ink font-bold ml-1">{form.aiThemeName}</span>
             </p>
-            <p className="text-xs text-gray-400 italic">{form.aiSetupNotes}</p>
-            <div className="flex gap-3 mt-1">
+            <p className="text-xs text-gray-500 font-mono italic">{form.aiSetupNotes}</p>
+            <div className="flex gap-3 mt-1 flex-wrap">
               {[form.aiFillColor, form.aiStrokeColor, form.aiBackgroundColor].map((c, i) => (
                 <div key={i} className="flex items-center gap-1.5">
-                  <div className="w-4 h-4 rounded border border-gray-600" style={{ background: c }} />
-                  <span className="text-xs text-gray-400 font-mono">{c}</span>
+                  <div className="w-4 h-4 rounded-none border border-gray-300 shadow-3xs" style={{ background: c }} />
+                  <span className="text-xs text-gray-700 font-mono font-bold">{c}</span>
                 </div>
               ))}
             </div>
@@ -481,7 +480,7 @@ function Step4({ form, onChange, onRequestAI, aiLoading, aiError }: Step4Props) 
                 onChange('aiApplied', false);
                 onChange('aiThemeName', '');
               }}
-              className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+              className="text-xs text-red-600 hover:underline font-mono font-bold cursor-pointer pt-1"
             >
               Remove theme
             </button>
@@ -489,8 +488,8 @@ function Step4({ form, onChange, onRequestAI, aiLoading, aiError }: Step4Props) 
         )}
 
         {aiError && (
-          <p role="alert" aria-live="assertive" className="text-xs text-red-400 flex items-center gap-1">
-            <AlertCircle size={12} /> {aiError}
+          <p role="alert" aria-live="assertive" className="text-xs text-red-600 font-bold flex items-center gap-1 font-mono">
+            <AlertCircle size={13} /> {aiError}
           </p>
         )}
 
@@ -498,9 +497,8 @@ function Step4({ form, onChange, onRequestAI, aiLoading, aiError }: Step4Props) 
           type="button"
           onClick={onRequestAI}
           disabled={aiLoading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-700 hover:bg-violet-600
-            disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium
-            transition-all duration-150 shadow-md shadow-violet-900/30"
+          className="flex items-center gap-2 px-4 py-2 rounded-none bg-gilded-ink hover:bg-black text-gilded-accent text-xs font-bold font-sans uppercase tracking-wider
+            disabled:opacity-50 disabled:cursor-not-allowed border border-gilded-border transition-all cursor-pointer shadow-3xs"
         >
           {aiLoading
             ? <><Loader2 size={14} className="animate-spin" /> Getting suggestions…</>
@@ -516,21 +514,21 @@ function Step5({ form, onChange, errors }: { form: WizardFormData; onChange: (k:
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-white">Seating Defaults</h2>
-        <p className="text-sm text-gray-400 mt-1">These are starting defaults — you can change individual tables later.</p>
+        <h2 className="text-xl font-bold text-gilded-ink font-serif">Seating Defaults</h2>
+        <p className="text-xs text-gray-500 font-mono mt-1">These are initial defaults — you can customize tables individually later.</p>
       </div>
       <Field id="wizard-table-shape" label="Default Table Shape">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {TABLE_SHAPES.map(({ value, label, icon }) => (
             <button
               key={value}
               type="button"
               aria-pressed={form.defaultTableShape === value}
               onClick={() => onChange('defaultTableShape', value)}
-              className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-sm font-medium transition-all duration-150
+              className={`flex flex-col items-center gap-1 p-3 rounded-none border text-xs font-serif font-bold transition-all duration-150 cursor-pointer
                 ${form.defaultTableShape === value
-                  ? 'bg-violet-600/20 border-violet-500 text-violet-300'
-                  : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-violet-600'}`}
+                  ? 'bg-gilded-ink border-gilded-ink text-gilded-accent shadow-xs'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-gilded-accent hover:text-gilded-ink'}`}
             >
               <span className="text-xl">{icon}</span>
               <span>{label}</span>
@@ -546,7 +544,7 @@ function Step5({ form, onChange, errors }: { form: WizardFormData; onChange: (k:
             min={2} max={30}
             value={Number(form.defaultTableSeats) || 8}
             onChange={e => onChange('defaultTableSeats', e.target.value)}
-            className="flex-1 accent-violet-500"
+            className="flex-1 accent-gilded-accent cursor-pointer"
           />
           <input
             type="number"
@@ -555,10 +553,10 @@ function Step5({ form, onChange, errors }: { form: WizardFormData; onChange: (k:
             min={2} max={30}
             aria-label="Seats per table number"
             aria-describedby={errors.find(e => e.includes('Seats')) ? 'wizard-seats-error' : undefined}
-            className={`${inputCls} w-20 text-center`}
+            className={`${inputCls} w-20 text-center font-mono font-bold`}
           />
         </div>
-        <p className="text-xs text-gray-500">Range: 2 – 30 seats</p>
+        <p className="text-xs text-gray-500 font-mono">Range: 2 – 30 seats</p>
       </Field>
     </div>
   );
@@ -581,25 +579,25 @@ function Step6Review({ form }: { form: WizardFormData }) {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-white">Review & Create</h2>
-        <p className="text-sm text-gray-400 mt-1">Everything looks good? Hit Create to open your event.</p>
+        <h2 className="text-xl font-bold text-gilded-ink font-serif">Review & Create</h2>
+        <p className="text-xs text-gray-500 font-mono mt-1">Review your event specifications before initializing the seating workspace.</p>
       </div>
-      <div className="rounded-xl border border-gray-700 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="rounded-none border border-gray-200 overflow-hidden bg-white">
+        <table className="w-full text-xs font-sans">
           <tbody>
             {rows.map(([label, value]) => (
-              <tr key={label} className="border-b border-gray-800 last:border-0">
-                <td className="py-2.5 px-4 text-gray-400 font-medium w-40">{label}</td>
-                <td className="py-2.5 px-4 text-gray-100">{value}</td>
+              <tr key={label} className="border-b border-gray-100 last:border-0">
+                <td className="py-2.5 px-4 text-gray-500 font-mono uppercase tracking-wider font-bold w-40 bg-slate-50/50">{label}</td>
+                <td className="py-2.5 px-4 text-gilded-ink font-semibold">{value}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       {form.description && (
-        <div className="rounded-lg bg-gray-800/60 border border-gray-700 p-3">
-          <p className="text-xs text-gray-400 font-medium mb-1">Description</p>
-          <p className="text-sm text-gray-200">{form.description}</p>
+        <div className="rounded-none bg-slate-50 border border-gray-200 p-3 space-y-1">
+          <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider font-bold">Description</p>
+          <p className="text-xs text-gray-700 leading-relaxed font-sans">{form.description}</p>
         </div>
       )}
     </div>
@@ -779,29 +777,29 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-950 flex items-start justify-center py-10 px-4">
+    <div className="min-h-screen bg-gilded-bg flex items-start justify-center py-6 sm:py-10 px-4">
       <div className="w-full max-w-2xl space-y-6">
 
         {/* Header */}
         <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-white tracking-tight">New Event Setup</h1>
-          <p className="text-sm text-gray-400">Step {step} of {TOTAL_STEPS}</p>
+          <h1 className="text-2xl font-bold text-gilded-ink font-serif tracking-tight">New Event Setup</h1>
+          <p className="text-xs text-gray-500 font-mono">Step {step} of {TOTAL_STEPS}</p>
         </div>
 
         {/* Step indicator */}
         <StepIndicator current={step} total={TOTAL_STEPS} labels={STEP_LABELS} />
 
         {/* Card */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8">
+        <div className="bg-white border border-gilded-border rounded-none shadow-3xs p-6 sm:p-8">
 
           {/* Step validation error banner */}
           {errors.length > 0 && (
             <div
               role="alert"
               aria-live="polite"
-              className="mb-5 flex items-start gap-3 p-3 rounded-lg bg-red-950/60 border border-red-800 text-red-300 text-sm"
+              className="mb-5 flex items-start gap-3 p-3 rounded-none bg-red-50 border border-red-200 text-red-700 text-xs font-mono"
             >
-              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
               <ul className="list-none space-y-0.5">
                 {errors.map(e => <li key={e}>{e}</li>)}
               </ul>
@@ -825,13 +823,13 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
           {step === 6 && <Step6Review form={form} />}
 
           {/* Navigation */}
-          <div className="mt-8 flex items-center justify-between gap-3 flex-wrap">
+          <div className="mt-8 flex items-center justify-between gap-3 flex-wrap border-t border-gray-100 pt-4">
             <div className="flex items-center gap-2">
               {onCancel && (
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-all"
+                  className="px-3 py-2 rounded-none text-xs font-mono text-gray-500 hover:text-gilded-ink hover:bg-gray-100 transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -839,7 +837,7 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
               <button
                 type="button"
                 onClick={saveDraft}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-violet-300 hover:bg-gray-800 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-none text-xs font-mono text-gray-500 hover:text-gilded-ink hover:bg-gray-100 transition-all cursor-pointer"
                 title="Save current progress as draft"
               >
                 <Save size={14} /> Save Draft
@@ -851,8 +849,8 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
                 <button
                   type="button"
                   onClick={goBack}
-                  className="flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium
-                    text-gray-300 bg-gray-800 hover:bg-gray-700 transition-all"
+                  className="flex items-center gap-1 px-4 py-2 rounded-none text-xs font-sans font-bold
+                    text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all cursor-pointer"
                 >
                   <ChevronLeft size={16} /> Back
                 </button>
@@ -861,8 +859,8 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
                 <button
                   type="button"
                   onClick={goNext}
-                  className="flex items-center gap-1 px-5 py-2 rounded-lg text-sm font-semibold
-                    bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-900/30 transition-all"
+                  className="flex items-center gap-1 px-5 py-2 rounded-none text-xs font-sans font-bold uppercase tracking-wider
+                    bg-gilded-ink hover:bg-black text-gilded-accent shadow-3xs border border-gilded-border transition-all cursor-pointer"
                 >
                   Next <ChevronRight size={16} />
                 </button>
@@ -871,9 +869,9 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
                   type="button"
                   onClick={handleCreate}
                   disabled={isCreating}
-                  className="flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold
-                    bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed
-                    text-white shadow-md shadow-emerald-900/30 transition-all"
+                  className="flex items-center gap-2 px-6 py-2 rounded-none text-xs font-sans font-bold uppercase tracking-wider
+                    bg-emerald-800 hover:bg-emerald-900 disabled:opacity-60 disabled:cursor-not-allowed
+                    text-white shadow-3xs transition-all cursor-pointer"
                 >
                   {isCreating ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                   Create Event

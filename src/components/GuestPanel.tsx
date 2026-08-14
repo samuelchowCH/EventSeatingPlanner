@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { Search, UserPlus, Filter, X, Table, Users, Sparkles, Utensils, Check } from 'lucide-react';
+import { Search, UserPlus, Filter, X, Table, Users, Sparkles, Utensils, Check, Mail } from 'lucide-react';
 import { Guest, Table as SeatingTable } from '../types';
+import { autoGenerateGuestEmails } from '../utils/seatingHelper';
 
 interface GuestPanelProps {
   guests: Guest[];
@@ -16,6 +17,7 @@ interface GuestPanelProps {
   onDeleteGuest: (guestId: string) => void;
   onUnseatGuest: (guestId: string) => void;
   onSeatGuest: (guestId: string, tableId: string, seatIndex: number) => void;
+  onUpdateGuests?: (guests: Guest[]) => void;
 }
 
 export default function GuestPanel({
@@ -27,6 +29,7 @@ export default function GuestPanel({
   onDeleteGuest,
   onUnseatGuest,
   onSeatGuest,
+  onUpdateGuests,
 }: GuestPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'seated' | 'unassigned'>('all');
@@ -37,6 +40,12 @@ export default function GuestPanel({
   const [newName, setNewName] = useState('');
   const [newGroup, setNewGroup] = useState('');
   const [newNotes, setNewNotes] = useState('');
+
+  const handleAutoFillEmails = () => {
+    if (!onUpdateGuests) return;
+    const updated = autoGenerateGuestEmails(guests);
+    onUpdateGuests(updated);
+  };
 
   // Extract unique groups for filter
   const groups = Array.from(new Set(guests.map((g) => g.group || 'Individual')));
@@ -99,13 +108,26 @@ export default function GuestPanel({
             <h2 className="text-base font-serif font-medium text-gilded-ink tracking-tight">Guest Directory</h2>
             <p className="text-[10px] text-gilded-ink/50 font-mono mt-0.5 uppercase tracking-wider">{guests.length} total guests registered</p>
           </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] text-white bg-gilded-ink hover:bg-gilded-accent font-mono uppercase tracking-widest font-medium rounded-none transition-all cursor-pointer"
-          >
-            <UserPlus size={12} />
-            <span>Add Guest</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onUpdateGuests && (
+              <button
+                type="button"
+                onClick={handleAutoFillEmails}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] text-gilded-ink bg-gilded-faint hover:bg-gilded-accent/20 border border-gilded-border font-mono uppercase tracking-widest font-medium rounded-none transition-all cursor-pointer"
+                title="Auto-generate sample email addresses for any guest missing an email"
+              >
+                <Mail size={11} />
+                <span>Auto-fill Emails</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] text-white bg-gilded-ink hover:bg-gilded-accent font-mono uppercase tracking-widest font-medium rounded-none transition-all cursor-pointer"
+            >
+              <UserPlus size={12} />
+              <span>Add Guest</span>
+            </button>
+          </div>
         </div>
 
         {/* Quick Add Form nested right at the top */}
@@ -306,10 +328,15 @@ export default function GuestPanel({
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2 text-[10px] text-gilded-ink/50 font-mono mt-0.5">
-                    <span className="truncate max-w-[120px]" title="Affiliation Group">{guest.group}</span>
+                  <div className="flex items-center gap-1.5 text-[10px] text-gilded-ink/50 font-mono mt-0.5 flex-wrap">
+                    <span className="truncate max-w-[90px]" title="Affiliation Group">{guest.group}</span>
+                    {guest.email && (
+                      <span className="text-gilded-accent truncate max-w-[120px]" title={`Email: ${guest.email}`}>
+                        {guest.email}
+                      </span>
+                    )}
                     {guest.notes && (
-                      <span className="text-amber-600 truncate max-w-[100px] italic">({guest.notes})</span>
+                      <span className="text-amber-600 truncate max-w-[80px] italic">({guest.notes})</span>
                     )}
                   </div>
                 </div>

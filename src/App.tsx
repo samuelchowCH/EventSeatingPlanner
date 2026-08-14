@@ -17,11 +17,11 @@ import ControlBoard from './components/ControlBoard';
 import PdfExportButton from './components/PdfExportButton';
 import TentCardStudio from './components/TentCardStudio';
 import TableDesigner from './components/TableDesigner';
-import StyleDesigner from './components/StyleDesigner';
 import LayoutDesigner from './components/LayoutDesigner';
+import { InvitationStudio } from './components/InvitationStudio';
 import ProjectSetupWizard, { WizardFormData } from './components/ProjectSetupWizard';
 import { autoAssignSeating, getSampleData, getLectureSampleData } from './utils/seatingHelper';
-import { Users, LayoutGrid, ClipboardList, Utensils, Calendar, Sparkles, HelpCircle, Table, RefreshCw, Tag, Trash2, Palette, Paintbrush, Layers, Check, Plus } from 'lucide-react';
+import { Users, LayoutGrid, ClipboardList, Utensils, Calendar, Sparkles, HelpCircle, Table, RefreshCw, Tag, Trash2, Palette, Layers, Check, Plus, Mail, X } from 'lucide-react';
 
 export default function App() {
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -29,17 +29,63 @@ export default function App() {
   const [defaultTableShape, setDefaultTableShape] = useState<'round' | 'rectangle' | 'square' | 'banquet' | 'banana' | 'nano' | 'custom'>('round');
   const [defaultTableSeats, setDefaultTableSeats] = useState<number>(8);
   const [selectedGuestForMoving, setSelectedGuestForMoving] = useState<Guest | null>(null);
-  const [activeTab, setActiveTab] = useState<'events' | 'floorplan' | 'tentcards' | 'designer' | 'style' | 'layout'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'floorplan' | 'tentcards' | 'designer' | 'layout' | 'invitations'>('events');
   const [isClearingAllSeats, setIsClearingAllSeats] = useState(false);
   const [isWipingAllData, setIsWipingAllData] = useState(false);
 
   // Multi-event States
   const [events, setEvents] = useState<Event[]>([]);
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
+  const activeEvent = events.find((e) => e.id === activeEventId);
   const [layoutElements, setLayoutElements] = useState<CanvasElement[]>([]);
   const [newEventName, setNewEventName] = useState('');
   const [newEventDate, setNewEventDate] = useState('');
   const [showWizard, setShowWizard] = useState(false);
+
+  // Gmail Header Connection Indicator State
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailEmail, setGmailEmail] = useState<string | null>(null);
+
+  const checkGmailStatus = async () => {
+    try {
+      const res = await fetch('/api/auth/google/status');
+      if (res.ok) {
+        const data = await res.json();
+        setGmailConnected(Boolean(data.connected));
+        setGmailEmail(data.email || null);
+      }
+    } catch (err) {}
+  };
+
+  useEffect(() => {
+    checkGmailStatus();
+
+    const handleSync = () => checkGmailStatus();
+    window.addEventListener('hashchange', handleSync);
+    window.addEventListener('gmail-status-changed', handleSync);
+    const interval = setInterval(checkGmailStatus, 4000);
+
+    return () => {
+      window.removeEventListener('hashchange', handleSync);
+      window.removeEventListener('gmail-status-changed', handleSync);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleDisconnectGmailHeader = async () => {
+    if (!confirm(`Disconnect connected Gmail account (${gmailEmail})?`)) return;
+    try {
+      const res = await fetch('/api/auth/google/disconnect', { method: 'POST' });
+      if (res.ok) {
+        setGmailConnected(false);
+        setGmailEmail(null);
+        window.dispatchEvent(new window.Event('gmail-status-changed'));
+      } else if (res.status === 401) {
+        setActiveTab('invitations');
+        alert('Please authenticate as admin in Gmail Studio to disconnect the Gmail account.');
+      }
+    } catch (err) {}
+  };
 
   // Seminar Matrix Row Generator States
   const [arenaMode, setArenaMode] = useState<'dining' | 'lecture'>('dining');
@@ -668,7 +714,7 @@ export default function App() {
           <div className="flex bg-gilded-faint p-1 rounded-none border border-gilded-border justify-center mx-auto">
             <button
               onClick={() => setActiveTab('events')}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-serif border ${
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-sans border ${
                 activeTab === 'events'
                   ? 'bg-gilded-accent text-gilded-ink shadow-3xs border-gilded-border'
                   : 'border-transparent text-gray-500 hover:text-gilded-ink'
@@ -680,7 +726,7 @@ export default function App() {
             <button
               disabled={!activeEventId}
               onClick={() => setActiveTab('floorplan')}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-serif border disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-sans border disabled:opacity-40 disabled:cursor-not-allowed ${
                 activeTab === 'floorplan'
                   ? 'bg-gilded-accent text-gilded-ink shadow-3xs border-gilded-border'
                   : 'border-transparent text-gray-500 hover:text-gilded-ink'
@@ -692,7 +738,7 @@ export default function App() {
             <button
               disabled={!activeEventId}
               onClick={() => setActiveTab('tentcards')}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-serif border disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-sans border disabled:opacity-40 disabled:cursor-not-allowed ${
                 activeTab === 'tentcards'
                   ? 'bg-gilded-accent text-gilded-ink shadow-3xs border-gilded-border'
                   : 'border-transparent text-gray-500 hover:text-gilded-ink'
@@ -704,7 +750,7 @@ export default function App() {
             <button
               disabled={!activeEventId}
               onClick={() => setActiveTab('designer')}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-serif border disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-sans border disabled:opacity-40 disabled:cursor-not-allowed ${
                 activeTab === 'designer'
                   ? 'bg-gilded-accent text-gilded-ink shadow-3xs border-gilded-border'
                   : 'border-transparent text-gray-500 hover:text-gilded-ink'
@@ -713,22 +759,11 @@ export default function App() {
               <Palette size={13} />
               <span>Table Builder</span>
             </button>
-            <button
-              disabled={!activeEventId}
-              onClick={() => setActiveTab('style')}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-serif border disabled:opacity-40 disabled:cursor-not-allowed ${
-                activeTab === 'style'
-                  ? 'bg-gilded-accent text-gilded-ink shadow-3xs border-gilded-border'
-                  : 'border-transparent text-gray-500 hover:text-gilded-ink'
-              }`}
-            >
-              <Paintbrush size={13} />
-              <span>Style Designer</span>
-            </button>
+
             <button
               disabled={!activeEventId}
               onClick={() => setActiveTab('layout')}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-serif border disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-sans border disabled:opacity-40 disabled:cursor-not-allowed ${
                 activeTab === 'layout'
                   ? 'bg-gilded-accent text-gilded-ink shadow-3xs border-gilded-border'
                   : 'border-transparent text-gray-500 hover:text-gilded-ink'
@@ -737,9 +772,37 @@ export default function App() {
               <Layers size={13} />
               <span>Layout Designer</span>
             </button>
+            <button
+              disabled={!activeEventId}
+              onClick={() => setActiveTab('invitations')}
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-none transition-all cursor-pointer font-sans border disabled:opacity-40 disabled:cursor-not-allowed ${
+                activeTab === 'invitations'
+                  ? 'bg-gilded-accent text-gilded-ink shadow-3xs border-gilded-border'
+                  : 'border-transparent text-gray-500 hover:text-gilded-ink'
+              }`}
+            >
+              <Mail size={13} />
+              <span>Gmail Studio</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-3 justify-end min-h-[38px]">
+            {gmailConnected && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-mono font-semibold shadow-3xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="truncate max-w-[140px] sm:max-w-[200px]" title={gmailEmail || ''}>
+                  Gmail: {gmailEmail}
+                </span>
+                <button
+                  onClick={handleDisconnectGmailHeader}
+                  className="ml-1 text-gray-400 hover:text-red-600 cursor-pointer"
+                  title="Disconnect Gmail Account"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+
             <div className={activeEventId && activeTab !== 'events' ? 'block' : 'invisible pointer-events-none'}>
               <PdfExportButton
                 guests={guests}
@@ -859,7 +922,7 @@ export default function App() {
                                 setActiveEventId(evt.id);
                                 setActiveTab('floorplan');
                               }}
-                              className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg border border-indigo-100 transition-colors cursor-pointer text-center"
+                              className="flex-1 py-1.5 bg-gilded-ink hover:bg-black text-gilded-accent text-[11px] font-bold font-serif uppercase tracking-wider rounded-none border border-gilded-border transition-colors cursor-pointer text-center"
                             >
                               Open Seating Plan
                             </button>
@@ -1057,12 +1120,12 @@ export default function App() {
 
                 {/* Default Table Setup Control Bar */}
                 {arenaMode === 'dining' && (
-                  <div className="mb-6 p-4 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-html2canvas-ignore="true">
+                  <div className="mb-6 p-4 bg-slate-50 border border-slate-100 rounded-none flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-html2canvas-ignore="true">
                     <div className="flex flex-col gap-0.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 tracking-wider uppercase font-mono">
-                        <Sparkles size={11} className="text-indigo-500" /> Default Table Configuration
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gilded-ink tracking-wider uppercase font-mono">
+                        <Sparkles size={11} className="text-gilded-accent" /> Default Table Configuration
                       </span>
-                      <span className="text-xs text-gray-500 font-medium">
+                      <span className="text-xs text-gray-500 font-sans">
                         Configure layout styles for raw data uploads or newly added tables:
                       </span>
                     </div>
@@ -1073,7 +1136,7 @@ export default function App() {
                         <select
                           value={defaultTableShape}
                           onChange={(e) => setDefaultTableShape(e.target.value as any)}
-                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white font-sans focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                          className="text-xs border border-gray-200 rounded-none px-2.5 py-1.5 bg-white font-sans focus:ring-1 focus:ring-gilded-accent cursor-pointer"
                         >
                           <option value="round">Round Table</option>
                           <option value="rectangle">Rectangle Table</option>
@@ -1087,7 +1150,7 @@ export default function App() {
                         <select
                           value={defaultTableSeats}
                           onChange={(e) => setDefaultTableSeats(Number(e.target.value))}
-                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white font-sans focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                          className="text-xs border border-gray-200 rounded-none px-2.5 py-1.5 bg-white font-sans focus:ring-1 focus:ring-gilded-accent cursor-pointer"
                         >
                           {[4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16].map((num) => (
                             <option key={num} value={num}>{num} Seats</option>
@@ -1099,7 +1162,7 @@ export default function App() {
                         type="button"
                         onClick={handleBulkApplyDefaults}
                         disabled={tables.length === 0}
-                        className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-30 disabled:pointer-events-none text-white px-3.5 py-1.5 rounded-lg transition-all shadow-3xs cursor-pointer flex items-center gap-1.5"
+                        className="text-xs font-bold bg-gilded-ink hover:bg-black text-gilded-accent disabled:opacity-30 disabled:pointer-events-none px-3.5 py-1.5 rounded-none border border-gilded-border transition-all shadow-3xs cursor-pointer flex items-center gap-1.5 font-sans uppercase tracking-wider"
                       >
                         Apply to All Tables
                       </button>
@@ -1108,15 +1171,15 @@ export default function App() {
                 )}
 
                 {tables.length === 0 ? (
-                  <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-2xl bg-gray-55/10">
+                  <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-none bg-gray-55/10">
                     <Table size={40} className="mx-auto text-gray-300 mb-3" />
-                    <p className="text-sm font-semibold text-gray-700">No tables created in seating plan</p>
+                    <p className="text-sm font-semibold text-gray-700 font-serif">No tables created in seating plan</p>
                     <p className="text-xs text-gray-400 mt-1 font-mono max-w-sm mx-auto">
                       Create a table manually with the controls above or load our pre-configured wedding dinner registry simulation.
                     </p>
                     <button
                       onClick={handleLoadTemplateData}
-                      className="mt-4 px-4.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold border border-indigo-100 transition-colors cursor-pointer"
+                      className="mt-4 px-4.5 py-2 bg-gilded-ink hover:bg-black text-gilded-accent rounded-none text-xs font-sans font-bold uppercase tracking-wider border border-gilded-border transition-colors cursor-pointer"
                     >
                       Load Sample Seating Plan
                     </button>
@@ -1207,6 +1270,7 @@ export default function App() {
                 tables={tables}
                 selectedGuestForMoving={selectedGuestForMoving}
                 onSelectGuestForMoving={setSelectedGuestForMoving}
+                onUpdateGuests={(updated) => setGuests(updated)}
                 onAddGuest={(name, group, notes) => {
                   const newGuest: Guest = {
                     id: `guest_manual_${Date.now()}`,
@@ -1255,21 +1319,15 @@ export default function App() {
           onUpdateLayoutElements={setLayoutElements}
           onBackToWorkspace={() => setActiveTab('floorplan')}
         />
-      ) : (
-        <StyleDesigner
-          onApplyStyleToTables={(style) => {
-            setTables((prevTables) =>
-              prevTables.map((t) => ({
-                ...t,
-                color: style.strokeColor,
-                fillColor: style.fillColor,
-                fontColor: style.strokeColor,
-                strokeWidth: style.strokeWidth
-              }))
-            );
-          }}
-          onBackToWorkspace={() => setActiveTab('floorplan')}
+      ) : activeTab === 'invitations' ? (
+        <InvitationStudio
+          activeEventId={activeEventId}
+          activeEventName={activeEvent?.name || 'Untitled Event'}
+          guests={guests}
+          tables={tables}
         />
+      ) : (
+        <div className="text-center py-20 text-gray-400 font-mono text-xs">View not found.</div>
       )}
       
       {/* Minimalistic Elegant Page Footer */}

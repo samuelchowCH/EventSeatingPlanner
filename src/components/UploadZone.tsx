@@ -208,6 +208,13 @@ export default function UploadZone({
   const processFile = (file: File) => {
     setFileName(file.name);
     setErrorMsg('');
+
+    // RF-05: Client-side file size limit check (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('File too large. Please upload files under 10 MB.');
+      return;
+    }
+
     const extension = file.name.split('.').pop()?.toLowerCase();
 
     if (extension === 'csv') {
@@ -303,6 +310,7 @@ export default function UploadZone({
 
     setMapping({
       nameColumn: findMatch(['name', 'guest', 'fullname', 'person', 'label']),
+      emailColumn: findMatch(['email', 'e-mail', 'mail', 'emailaddress', 'address']),
       tableColumn: findMatch(['table', 'tablenum', 'tableno', 'grouping']),
       seatColumn: findMatch(['seat', 'placement', 'chair', 'seatnum']),
       groupColumn: findMatch(['group', 'family', 'company', 'companyname', 'organization', 'party', 'affiliation']),
@@ -376,9 +384,13 @@ export default function UploadZone({
           if (val !== undefined && val !== null) {
             const guestName = String(val).trim();
             if (guestName) {
+              const emailPrefix = guestName.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '.');
+              const fakeEmail = `${emailPrefix || 'guest'}@example.com`;
+
               guests.push({
                 id: `guest_imported_${Date.now()}_col_${colIndex}_row_${rowIndex}`,
                 name: guestName,
+                email: fakeEmail,
                 tableId,
                 seatIndex: seatIdx++,
                 group: tableName, // Set group automatically to identify them as sitting together!
@@ -403,6 +415,16 @@ export default function UploadZone({
       });
 
       onDataLoaded(guests, Array.from(tableMap.values()), appendMode);
+
+      // RF-07: Clear temporary upload data from sessionStorage
+      sessionStorage.removeItem('seating_planner_temp_rows');
+      sessionStorage.removeItem('seating_planner_temp_headers');
+      sessionStorage.removeItem('seating_planner_temp_filename');
+      sessionStorage.removeItem('seating_planner_temp_mapping');
+      sessionStorage.removeItem('seating_planner_temp_format');
+      sessionStorage.removeItem('seating_planner_temp_is_mapping');
+      sessionStorage.removeItem('seating_planner_temp_raw_grid');
+      sessionStorage.removeItem('seating_planner_temp_header_idx');
 
       // Reset state
       setParsedRows(null);
@@ -442,6 +464,10 @@ export default function UploadZone({
       const name = String(row[mapping.nameColumn] || '').trim();
       if (!name) return; // skip rows without a name
 
+      const rawEmailVal = mapping.emailColumn ? String(row[mapping.emailColumn] || '').trim() : '';
+      const emailPrefix = name.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '.');
+      const email = rawEmailVal || `${emailPrefix || 'guest'}@example.com`;
+
       const rawTableVal = mapping.tableColumn ? row[mapping.tableColumn] : null;
       const cleanTable = getCleanTableIdAndName(rawTableVal);
 
@@ -472,6 +498,7 @@ export default function UploadZone({
       guests.push({
         id: `guest_imported_${Date.now()}_${index}`,
         name,
+        email,
         tableId,
         seatIndex: tableId ? (seatIndex !== null ? seatIndex : null) : null,
         group: group || 'Individual',
@@ -530,6 +557,16 @@ export default function UploadZone({
 
     onDataLoaded(guests, tablesList, appendMode);
     
+    // RF-07: Clear temporary upload data from sessionStorage
+    sessionStorage.removeItem('seating_planner_temp_rows');
+    sessionStorage.removeItem('seating_planner_temp_headers');
+    sessionStorage.removeItem('seating_planner_temp_filename');
+    sessionStorage.removeItem('seating_planner_temp_mapping');
+    sessionStorage.removeItem('seating_planner_temp_format');
+    sessionStorage.removeItem('seating_planner_temp_is_mapping');
+    sessionStorage.removeItem('seating_planner_temp_raw_grid');
+    sessionStorage.removeItem('seating_planner_temp_header_idx');
+
     // Reset state
     setParsedRows(null);
     setHeaders([]);
@@ -540,16 +577,16 @@ export default function UploadZone({
   };
 
   const downloadStandardTemplate = () => {
-    const csvContent = "Guest Name,Table Number,Seat Number,Group/Affiliation,Notes/Dietary\n" +
-      "Amelia Earhart,Table 1,1,Aviation Pioneers,Vegetarian\n" +
-      "Charles Lindbergh,Table 1,2,Aviation Pioneers,\n" +
-      "Orville Wright,Table 1,3,Aviation Pioneers,\n" +
-      "Wilbur Wright,Table 1,4,Aviation Pioneers,\n" +
-      "Isaac Newton,Table 2,1,Science Club,Nut allergy\n" +
-      "Albert Einstein,Table 2,2,Science Club,\n" +
-      "Marie Curie,Table 2,3,Science Club,VIP guest\n" +
-      "Richard Feynman,Table 2,4,Science Club,\n" +
-      "Leonardo da Vinci,, ,Artists,Gluten-free";
+    const csvContent = "Guest Name,Email,Table Number,Seat Number,Group/Affiliation,Notes/Dietary\n" +
+      "Amelia Earhart,amelia.earhart@example.com,Table 1,1,Aviation Pioneers,Vegetarian\n" +
+      "Charles Lindbergh,charles.lindbergh@example.com,Table 1,2,Aviation Pioneers,\n" +
+      "Orville Wright,orville.wright@example.com,Table 1,3,Aviation Pioneers,\n" +
+      "Wilbur Wright,wilbur.wright@example.com,Table 1,4,Aviation Pioneers,\n" +
+      "Isaac Newton,isaac.newton@example.com,Table 2,1,Science Club,Nut allergy\n" +
+      "Albert Einstein,albert.einstein@example.com,Table 2,2,Science Club,\n" +
+      "Marie Curie,marie.curie@example.com,Table 2,3,Science Club,VIP guest\n" +
+      "Richard Feynman,richard.feynman@example.com,Table 2,4,Science Club,\n" +
+      "Leonardo da Vinci,leonardo.davinci@example.com,, ,Artists,Gluten-free";
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

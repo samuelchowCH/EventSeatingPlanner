@@ -7,3 +7,7 @@ coverage/
 .env*
 !.env.example
 .agent/
+data/
+*.db
+scratch/
+tests/

@@ -67,6 +67,7 @@ export interface Table {
 
 export interface MappingOptions {
   nameColumn: string;
+  emailColumn?: string;
   tableColumn: string;
   seatColumn: string;
   groupColumn: string;

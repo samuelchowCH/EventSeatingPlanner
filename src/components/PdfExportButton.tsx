@@ -5,9 +5,9 @@
 
 import React, { useState } from 'react';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { FileDown, Printer, LayoutGrid, Check, FileText, ListOrdered, Calendar, Tag, RefreshCw } from 'lucide-react';
 import { Guest, Table, ExportLayoutType } from '../types';
+import { captureElementToPng, captureElementToJpeg } from '../utils/domImageExporter';
 
 const hexToRgb = (hex: string): [number, number, number] => {
   const cleanHex = hex.replace('#', '');
@@ -27,8 +27,8 @@ interface PdfExportButtonProps {
   guests: Guest[];
   tables: Table[];
   floorPlanRef: React.RefObject<HTMLDivElement | null>;
-  activeTab?: 'floorplan' | 'tentcards' | 'designer' | 'style' | 'layout';
-  setActiveTab?: (tab: 'floorplan' | 'tentcards' | 'designer' | 'style' | 'layout') => void;
+  activeTab?: 'events' | 'floorplan' | 'tentcards' | 'designer' | 'style' | 'layout' | 'invitations';
+  setActiveTab?: (tab: 'events' | 'floorplan' | 'tentcards' | 'designer' | 'style' | 'layout' | 'invitations') => void;
   exportTentCardsRef?: React.RefObject<(() => void) | null>;
   isExportingTentCards?: boolean;
   exportTentCardsProgress?: string;
@@ -50,8 +50,6 @@ export default function PdfExportButton({
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
   const [showOptionsModal, setShowOptionsModal] = useState(false);
 
-
-
   const triggerPDFGeneration = async () => {
     setIsExporting(true);
     let tabSwitched = false;
@@ -61,8 +59,7 @@ export default function PdfExportButton({
       if ((layoutType === 'floorplan' || layoutType === 'jpeg-images') && activeTab !== 'floorplan' && setActiveTab) {
         setActiveTab('floorplan');
         tabSwitched = true;
-        // Wait for the DOM to update and layout to be visible
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 800));
       }
 
       const doc = new jsPDF({
@@ -81,16 +78,25 @@ export default function PdfExportButton({
       });
 
       if (layoutType === 'floorplan') {
-        // Option 1: Visual Floor Plan screenshot via html2canvas (one page per table!)
         if (floorPlanRef.current) {
           const originalScrollTop = floorPlanRef.current.scrollTop;
           const originalScrollLeft = floorPlanRef.current.scrollLeft;
           floorPlanRef.current.scrollTop = 0;
           floorPlanRef.current.scrollLeft = 0;
 
-          const tableElements = Array.from(floorPlanRef.current.children) as HTMLElement[];
+          if (tables.length === 0) {
+            throw new Error("No tables found in this seating plan. Please create tables first before exporting visual floor plan sheets.");
+          }
+
+          const rawElements = Array.from(floorPlanRef.current.children) as HTMLElement[];
+          const tableElements = rawElements.filter((el) => {
+            if (el.classList.contains('pointer-events-none')) return false;
+            if (el.innerText && el.innerText.includes('No banquet tables')) return false;
+            return el.offsetHeight > 80;
+          });
+
           if (tableElements.length === 0) {
-            throw new Error("No table visualizers to export.");
+            throw new Error("No table visualizer cards are currently rendered in the floor plan view.");
           }
 
           for (let i = 0; i < tableElements.length; i++) {
@@ -99,18 +105,17 @@ export default function PdfExportButton({
               doc.addPage();
             }
 
-            let canvas: HTMLCanvasElement;
+            let imgData = '';
+            let imgWidth = 400;
+            let imgHeight = 400;
             try {
               document.body.classList.add('is-exporting');
               tableElement.classList.add('is-exporting');
-              canvas = await html2canvas(tableElement, {
-                scale: 2, // Retinal high resolution
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: 0,
-              });
+
+              const captured = await captureElementToPng(tableElement, { pixelRatio: 2 });
+              imgData = captured.dataUrl;
+              imgWidth = captured.width;
+              imgHeight = captured.height;
             } catch (e) {
               console.error(`Could not render visual table layout for table index ${i}`, e);
               throw e;
@@ -119,18 +124,11 @@ export default function PdfExportButton({
               tableElement.classList.remove('is-exporting');
             }
 
-            const imgData = canvas.toDataURL('image/png');
-
-            // Outer padding
             const margin = 10;
             const contentWidth = pageWidth - margin * 2;
-            const contentHeight = pageHeight - margin * 2 - 20; // reserve space for headers
+            const contentHeight = pageHeight - margin * 2 - 20;
 
-            // Estimate aspect ratio
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
             const ratio = imgWidth / imgHeight;
-
             let renderWidth = contentWidth;
             let renderHeight = contentWidth / ratio;
 
@@ -139,14 +137,10 @@ export default function PdfExportButton({
               renderWidth = contentHeight * ratio;
             }
 
-            // Center alignment within remaining page content box
             const x = (pageWidth - renderWidth) / 2;
             const y = 28 + (contentHeight - renderHeight) / 2;
-
-            // Find associated table name metadata
             const tableMeta = tables[i] || { name: `Table ${i + 1}` };
 
-            // Print Header text
             doc.setFont('Helvetica', 'bold');
             doc.setFontSize(16);
             const fColorRgb = hexToRgb((tableMeta as any).fontColor || '#1f2937');
@@ -155,23 +149,19 @@ export default function PdfExportButton({
 
             doc.setFont('Helvetica', 'normal');
             doc.setFontSize(9);
-            doc.setTextColor(107, 114, 128); // gray-500
+            doc.setTextColor(107, 114, 128);
             doc.text(`Generated on ${today} | Table ${i + 1} of ${tables.length}`, pageWidth / 2, 18, { align: 'center' });
 
-            // Accent separating line
             doc.setLineWidth(0.3);
             doc.setDrawColor(229, 231, 235);
             doc.line(15, 22, pageWidth - 15, 22);
 
-            // Add table visualizer screenshot image
             doc.addImage(imgData, 'PNG', x, y, renderWidth, renderHeight);
 
-            // Footer
             doc.setFontSize(8);
             doc.setTextColor(156, 163, 175);
           }
 
-          // Restore scroll position
           floorPlanRef.current.scrollTop = originalScrollTop;
           floorPlanRef.current.scrollLeft = originalScrollLeft;
         } else {
@@ -180,34 +170,38 @@ export default function PdfExportButton({
       }
 
       else if (layoutType === 'jpeg-images') {
-        // Option 4: Capture individual table layout visualizers as crisp JPEG files
         if (floorPlanRef.current) {
           const originalScrollTop = floorPlanRef.current.scrollTop;
           const originalScrollLeft = floorPlanRef.current.scrollLeft;
           floorPlanRef.current.scrollTop = 0;
           floorPlanRef.current.scrollLeft = 0;
 
-          const tableElements = Array.from(floorPlanRef.current.children) as HTMLElement[];
+          if (tables.length === 0) {
+            throw new Error("No tables found in this seating plan. Please create tables first before exporting visual floor plan images.");
+          }
+
+          const rawElements = Array.from(floorPlanRef.current.children) as HTMLElement[];
+          const tableElements = rawElements.filter((el) => {
+            if (el.classList.contains('pointer-events-none')) return false;
+            if (el.innerText && el.innerText.includes('No banquet tables')) return false;
+            return el.offsetHeight > 80;
+          });
+
           if (tableElements.length === 0) {
-            throw new Error("No table visualizers to export.");
+            throw new Error("No table visualizer cards are currently rendered in the floor plan view.");
           }
 
           for (let i = 0; i < tableElements.length; i++) {
             const tableElement = tableElements[i];
             const tableMeta = tables[i] || { name: `Table ${i + 1}` };
 
-            let canvas: HTMLCanvasElement;
+            let imgData = '';
             try {
               document.body.classList.add('is-exporting');
               tableElement.classList.add('is-exporting');
-              canvas = await html2canvas(tableElement, {
-                scale: 2.5, // Crisp retina-quality JPEG
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: 0,
-              });
+
+              const captured = await captureElementToJpeg(tableElement, { pixelRatio: 2.5, quality: 0.95 });
+              imgData = captured.dataUrl;
             } catch (e) {
               console.error(`Could not render visual table layout for table index ${i}`, e);
               throw e;
@@ -216,8 +210,6 @@ export default function PdfExportButton({
               tableElement.classList.remove('is-exporting');
             }
 
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
             const link = document.createElement('a');
             link.download = `${tableMeta.name.replace(/[\s#]+/g, '_')}_Layout.jpg`;
             link.href = imgData;
@@ -225,7 +217,6 @@ export default function PdfExportButton({
             link.click();
             document.body.removeChild(link);
 
-            // Stagger downloads slightly to prevent browser security blocking multiple concurrent files
             if (i < tableElements.length - 1) {
               await new Promise((resolve) => setTimeout(resolve, 250));
             }
@@ -496,9 +487,10 @@ export default function PdfExportButton({
       doc.save(`Seating_Plan_${layoutType}_${today.replace(/[\s,]+/g, '_')}.pdf`);
       setIsExporting(false);
       setShowOptionsModal(false);
-    } catch (err) {
-      console.error(err);
-      alert('Error printing PDF. Try exporting tables individually or matching simpler browser layout.');
+    } catch (err: any) {
+      console.error('[PdfExportButton Error]:', err);
+      const errMsg = err?.message || 'Error printing PDF. Try exporting tables individually or matching simpler browser layout.';
+      alert(`PDF Export Failed: ${errMsg}`);
       setIsExporting(false);
     } finally {
       if (tabSwitched && setActiveTab && originalTab) {

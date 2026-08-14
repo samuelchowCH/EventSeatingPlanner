@@ -198,6 +198,19 @@ export function autoAssignSeating(
   return { updatedGuests: workingGuests, updatedTables: workingTables };
 }
 
+export function autoGenerateGuestEmails(guests: Guest[]): Guest[] {
+  return guests.map((g) => {
+    if (g.email && g.email.trim() !== '') return g;
+
+    const cleanName = g.name.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '');
+    const nameParts = cleanName.split(/\s+/).filter(Boolean);
+    const emailPrefix = nameParts.length > 0 ? nameParts.join('.') : `guest_${g.id.slice(-4)}`;
+    const email = `${emailPrefix}@example.com`;
+
+    return { ...g, email };
+  });
+}
+
 /**
  * Returns preset sample data of guests and tables to make testing beautiful.
  */
@@ -224,48 +237,49 @@ export function getSampleData(): { guests: Guest[]; tables: Table[] } {
 
   const sampleGuestsRaw = [
     // Group: Smith Family
-    { name: 'John Smith', group: 'Smith Family', notes: 'Gluten Free' },
-    { name: 'Mary Smith', group: 'Smith Family', notes: '' },
-    { name: 'David Smith', group: 'Smith Family', notes: 'Child menu' },
-    { name: 'Emma Smith', group: 'Smith Family', notes: 'Child menu' },
+    { name: 'John Smith', email: 'john.smith@example.com', group: 'Smith Family', notes: 'Gluten Free' },
+    { name: 'Mary Smith', email: 'mary.smith@example.com', group: 'Smith Family', notes: '' },
+    { name: 'David Smith', email: 'david.smith@example.com', group: 'Smith Family', notes: 'Child menu' },
+    { name: 'Emma Smith', email: 'emma.smith@example.com', group: 'Smith Family', notes: 'Child menu' },
     
     // Group: Wedding Party
-    { name: 'Sarah Connor', group: 'Wedding Party', notes: 'Maid of Honor' },
-    { name: 'John Connor', group: 'Wedding Party', notes: 'Groom' },
-    { name: 'Kate Brewster', group: 'Wedding Party', notes: 'Bride' },
-    { name: 'Marcus Wright', group: 'Wedding Party', notes: 'Best Man' },
+    { name: 'Sarah Connor', email: 'sarah.connor@example.com', group: 'Wedding Party', notes: 'Maid of Honor' },
+    { name: 'John Connor', email: 'john.connor@example.com', group: 'Wedding Party', notes: 'Groom' },
+    { name: 'Kate Brewster', email: 'kate.brewster@example.com', group: 'Wedding Party', notes: 'Bride' },
+    { name: 'Marcus Wright', email: 'marcus.wright@example.com', group: 'Wedding Party', notes: 'Best Man' },
 
     // Group: Tech Friends
-    { name: 'Alan Turing', group: 'Tech Friends', notes: 'Vegetarian' },
-    { name: 'Ada Lovelace', group: 'Tech Friends', notes: 'VIP' },
-    { name: 'Grace Hopper', group: 'Tech Friends', notes: '' },
-    { name: 'Claude Shannon', group: 'Tech Friends', notes: '' },
-    { name: 'Tim Berners-Lee', group: 'Tech Friends', notes: '' },
+    { name: 'Alan Turing', email: 'alan.turing@example.com', group: 'Tech Friends', notes: 'Vegetarian' },
+    { name: 'Ada Lovelace', email: 'ada.lovelace@example.com', group: 'Tech Friends', notes: 'VIP' },
+    { name: 'Grace Hopper', email: 'grace.hopper@example.com', group: 'Tech Friends', notes: '' },
+    { name: 'Claude Shannon', email: 'claude.shannon@example.com', group: 'Tech Friends', notes: '' },
+    { name: 'Tim Berners-Lee', email: 'tim.bernerslee@example.com', group: 'Tech Friends', notes: '' },
 
     // Group: Davis Clan
-    { name: 'Robert Davis', group: 'Davis Clan', notes: '' },
-    { name: 'Patricia Davis', group: 'Davis Clan', notes: 'Vegan' },
-    { name: 'James Davis', group: 'Davis Clan', notes: '' },
-    { name: 'Linda Davis', group: 'Davis Clan', notes: '' },
+    { name: 'Robert Davis', email: 'robert.davis@example.com', group: 'Davis Clan', notes: '' },
+    { name: 'Patricia Davis', email: 'patricia.davis@example.com', group: 'Davis Clan', notes: 'Vegan' },
+    { name: 'James Davis', email: 'james.davis@example.com', group: 'Davis Clan', notes: '' },
+    { name: 'Linda Davis', email: 'linda.davis@example.com', group: 'Davis Clan', notes: '' },
 
     // Group: College Buddies
-    { name: 'Sherlock Holmes', group: 'College Buddies', notes: '' },
-    { name: 'John Watson', group: 'College Buddies', notes: '' },
-    { name: 'Irene Adler', group: 'College Buddies', notes: '' },
+    { name: 'Sherlock Holmes', email: 'sherlock.holmes@example.com', group: 'College Buddies', notes: '' },
+    { name: 'John Watson', email: 'john.watson@example.com', group: 'College Buddies', notes: '' },
+    { name: 'Irene Adler', email: 'irene.adler@example.com', group: 'College Buddies', notes: '' },
 
     // Group: Office Team
-    { name: 'Steve Jobs', group: 'Office Team', notes: 'Fruitarian' },
-    { name: 'Steve Wozniak', group: 'Office Team', notes: '' },
-    { name: 'Jony Ive', group: 'Office Team', notes: '' },
+    { name: 'Steve Jobs', email: 'steve.jobs@example.com', group: 'Office Team', notes: 'Fruitarian' },
+    { name: 'Steve Wozniak', email: 'steve.wozniak@example.com', group: 'Office Team', notes: '' },
+    { name: 'Jony Ive', email: 'jony.ive@example.com', group: 'Office Team', notes: '' },
 
     // Individuals
-    { name: 'Albert Einstein', group: 'Science', notes: 'Loves violin' },
-    { name: 'Marie Curie', group: 'Science', notes: '' },
+    { name: 'Albert Einstein', email: 'albert.einstein@example.com', group: 'Science', notes: 'Loves violin' },
+    { name: 'Marie Curie', email: 'marie.curie@example.com', group: 'Science', notes: '' },
   ];
 
   const guests: Guest[] = sampleGuestsRaw.map((raw, idx) => ({
     id: `guest_sample_${idx + 1}`,
     name: raw.name,
+    email: raw.email,
     tableId: null,
     seatIndex: null,
     group: raw.group,

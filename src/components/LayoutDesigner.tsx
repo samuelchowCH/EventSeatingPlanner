@@ -648,7 +648,7 @@ export default function LayoutDesigner({ tables, layoutElements, onUpdateLayoutE
                 setSidebarTab('library');
                 setLibraryPage('elements');
               }}
-              className={`flex-1 py-3 text-xs font-bold font-serif text-center border-b-2 transition-all cursor-pointer ${sidebarTab === 'library'
+              className={`flex-1 py-3 text-xs font-bold font-sans text-center border-b-2 transition-all cursor-pointer ${sidebarTab === 'library'
                   ? 'border-amber-700 text-amber-900 bg-amber-50/20'
                   : 'border-transparent text-gray-500 hover:text-gray-900'
                 }`}
@@ -657,7 +657,7 @@ export default function LayoutDesigner({ tables, layoutElements, onUpdateLayoutE
             </button>
             <button
               onClick={() => setSidebarTab('tables')}
-              className={`flex-1 py-3 text-xs font-bold font-serif text-center border-b-2 transition-all cursor-pointer relative ${sidebarTab === 'tables'
+              className={`flex-1 py-3 text-xs font-bold font-sans text-center border-b-2 transition-all cursor-pointer relative ${sidebarTab === 'tables'
                   ? 'border-amber-700 text-amber-900 bg-amber-50/20'
                   : 'border-transparent text-gray-500 hover:text-gray-900'
                 }`}
@@ -666,7 +666,7 @@ export default function LayoutDesigner({ tables, layoutElements, onUpdateLayoutE
             </button>
             <button
               onClick={() => setSidebarTab('properties')}
-              className={`flex-1 py-3 text-xs font-bold font-serif text-center border-b-2 transition-all cursor-pointer ${sidebarTab === 'properties'
+              className={`flex-1 py-3 text-xs font-bold font-sans text-center border-b-2 transition-all cursor-pointer ${sidebarTab === 'properties'
                   ? 'border-amber-700 text-amber-900 bg-amber-50/20'
                   : 'border-transparent text-gray-500 hover:text-gray-900'
                 }`}

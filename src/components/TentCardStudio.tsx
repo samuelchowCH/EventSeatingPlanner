@@ -5,9 +5,9 @@
 
 import React, { useState, useRef } from 'react';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { Tag, FileDown, Eye, Check, RefreshCw, Printer, ZoomIn, ZoomOut, Grid, Info, Layout } from 'lucide-react';
 import { Guest, Table } from '../types';
+import { captureElementToJpeg } from '../utils/domImageExporter';
 
 interface TentCardStudioProps {
   guests: Guest[];
@@ -143,18 +143,14 @@ export default function TentCardStudio({
   // Render a high-resolution PDF by rendering each page div to an html2canvas, then adding it to jsPDF
   const handleExportPDF = async () => {
     if (sortedGuests.length === 0) return;
-    currentSetIsExporting(true);
-    currentSetExportProgress('Preparing tent card pages...');
+    setIsExporting(true);
+    currentSetExportProgress('Initializing tent card document...');
 
     try {
-      // Set short delay to let browser finish any layout calculations
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: paperSize,
-        compress: true,
       });
 
       const pages = printContainerRef.current?.children;
@@ -166,18 +162,8 @@ export default function TentCardStudio({
         currentSetExportProgress(`Generating Page ${i + 1} of ${pages.length}...`);
         const pageEl = pages[i] as HTMLElement;
 
-        // Take high-resolution screenshot (scale: 2 or 3 gives crisp text print)
-        const canvas = await html2canvas(pageEl, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0,
-        });
-
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const captured = await captureElementToJpeg(pageEl, { pixelRatio: 2, quality: 0.95 });
+        const imgData = captured.dataUrl;
 
         if (i > 0) {
           doc.addPage();

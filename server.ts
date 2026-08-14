@@ -3,24 +3,187 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import helmet from "helmet";
+import cors from "cors";
+import session from "express-session";
+import { config } from "./server/config.js";
+import { getDb } from "./server/db.js";
+import { startQueueWorker } from "./server/services/queueWorker.js";
+import adminRouter from "./server/routes/admin.js";
+import authRouter from "./server/routes/auth.js";
+import invitationsRouter from "./server/routes/invitations.js";
+import { generateBailianStyle, generateBailianImage, getBailianApiKey } from "./server/services/aliyunBailian.js";
 
 dotenv.config();
+
+/**
+ * Minimal SQLite-backed session store — avoids Windows EPERM file rename errors
+ * that plague session-file-store on Windows.
+ */
+class SQLiteSessionStore extends session.Store {
+  private ready = false;
+
+  constructor() {
+    super();
+    // Ensure sessions table exists
+    getDb().then((db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          sid   TEXT NOT NULL PRIMARY KEY,
+          sess  TEXT NOT NULL,
+          expire INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions(expire);
+      `).then(() => { this.ready = true; }).catch(console.error);
+    }).catch(console.error);
+  }
+
+  async get(sid: string, callback: (err: any, session?: session.SessionData | null) => void) {
+    try {
+      const db = await getDb();
+      const row = await db.get<{ sess: string; expire: number }>(
+        'SELECT sess, expire FROM sessions WHERE sid = ?', [sid]
+      );
+      if (!row || row.expire < Date.now()) {
+        return callback(null, null);
+      }
+      callback(null, JSON.parse(row.sess));
+    } catch (err) { callback(err); }
+  }
+
+  async set(sid: string, sessionData: session.SessionData, callback?: (err?: any) => void) {
+    try {
+      const db = await getDb();
+      const expire = Date.now() + 8 * 60 * 60 * 1000; // 8h
+      await db.run(
+        `INSERT INTO sessions (sid, sess, expire) VALUES (?, ?, ?)
+         ON CONFLICT(sid) DO UPDATE SET sess = excluded.sess, expire = excluded.expire`,
+        [sid, JSON.stringify(sessionData), expire]
+      );
+      callback?.();
+    } catch (err) { callback?.(err); }
+  }
+
+  async destroy(sid: string, callback?: (err?: any) => void) {
+    try {
+      const db = await getDb();
+      await db.run('DELETE FROM sessions WHERE sid = ?', [sid]);
+      callback?.();
+    } catch (err) { callback?.(err); }
+  }
+
+  async touch(sid: string, _session: session.SessionData, callback?: (err?: any) => void) {
+    try {
+      const db = await getDb();
+      const expire = Date.now() + 8 * 60 * 60 * 1000;
+      await db.run('UPDATE sessions SET expire = ? WHERE sid = ?', [expire, sid]);
+      callback?.();
+    } catch (err) { callback?.(err); }
+  }
+}
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  // Initialize SQLite database and start queue worker
+  try {
+    await getDb();
+    startQueueWorker();
+  } catch (err) {
+    console.error("Failed to initialize SQLite database or start queue worker:", err);
+  }
+
+  // RF-09: Helmet security headers
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "blob:"],
+          connectSrc: ["'self'"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+    })
+  );
+
+  // RF-08: CORS — allow both localhost:3000 and 127.0.0.1:3000 so dev access works regardless of host used
+  const allowedOrigins = new Set([
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    ...(process.env.APP_URL ? [process.env.APP_URL.trim()] : []),
+  ]);
+  app.use(
+    cors({
+      origin: (origin, cb) => {
+        // Allow requests with no origin (same-origin, curl, etc.)
+        if (!origin || allowedOrigins.has(origin)) return cb(null, true);
+        cb(new Error(`CORS: origin '${origin}' not allowed`));
+      },
+    })
+  );
+
+  // RF-11: Raise JSON body limit to 10mb to support inline base64 image payloads from the email template editor
+  app.use(express.json({ limit: "10mb" }));
+
+  const isProd = process.env.NODE_ENV === "production";
+  const cookieName = isProd ? "__Host-seating-sid" : "seating-sid";
+
+  // SQLite-backed session store (no file rename, no EPERM on Windows)
+  app.use(
+    session({
+      name: cookieName,
+      secret: config.sessionSecret || "default_fallback_secret_must_be_overridden_in_env_file",
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      store: new SQLiteSessionStore(),
+      cookie: {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: "lax",
+        maxAge: 30 * 60 * 1000,
+      },
+    })
+  );
+
+  // Mount API Routers
+  app.use("/api/admin", adminRouter);
+  app.use("/api/auth", authRouter);
+  app.use("/api/invitations", invitationsRouter);
+  app.use("/unsubscribe", invitationsRouter);
 
   const apiKey = process.env.GEMINI_API_KEY;
   const hasApiKey = apiKey && apiKey.trim() !== "" && apiKey !== "undefined";
 
-  // API endpoint for AI Style Prompt Generator
-  app.post("/api/gemini/style", async (req, res) => {
+  const ALLOWED_EVENT_TYPES = ["Wedding", "Seminar", "Birthday", "Corporate", "Other"];
+
+  // API endpoint for AI Style Prompt Generator (supports Gemini & Aliyun Bailian)
+  const handleStyleGeneration = async (req: express.Request, res: express.Response) => {
     try {
-      const { prompt } = req.body;
-      if (!prompt) {
-        return res.status(400).json({ error: "Prompt is required" });
+      const { prompt, provider = "gemini" } = req.body;
+
+      // Length cap & type validation
+      if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
+        return res.status(400).json({ error: "Prompt is required and must be a string" });
+      }
+      if (prompt.length > 2000) {
+        return res.status(400).json({ error: "Prompt must be 2000 characters or fewer" });
+      }
+
+      console.log(`[AI Style Generation - Provider: ${provider}] Length: ${prompt.length} chars\nPrompt:\n"${prompt}"\n`);
+
+      if (provider === "aliyun") {
+        if (!getBailianApiKey()) {
+          return res.status(400).json({
+            error: "Aliyun Bailian API Key (ALIYUN_BAILIAN_API_KEY or DASHSCOPE_API_KEY) is not set in .env file.",
+          });
+        }
+        const styleData = await generateBailianStyle(prompt);
+        return res.json(styleData);
       }
 
       if (!hasApiKey) {
@@ -115,7 +278,6 @@ Give it a short, elegant name.`,
     } catch (error: any) {
       console.error("Gemini API Error:", error);
 
-      // Safe string extraction avoiding circular references in JSON.stringify(error)
       const errStr = error?.message || error?.toString() || "";
       const causeStr = error?.cause?.message || error?.cause?.toString() || "";
       const combinedErrorText = `${errStr} ${causeStr}`.toLowerCase();
@@ -138,16 +300,37 @@ Give it a short, elegant name.`,
         return res.status(504).json({ error: "The style generator connection timed out. Please try again in a moment." });
       }
 
-      res.status(500).json({ error: error.message || "Failed to generate style colors" });
+      // RF-04: Sanitized client error response
+      res.status(500).json({ error: "Failed to generate style colors. Please try again." });
     }
-  });
+  };
 
-  // API endpoint for AI Background Image Generation (Step 3 of Decoration Pipeline)
-  app.post("/api/gemini/image", async (req, res) => {
+  app.post("/api/gemini/style", handleStyleGeneration);
+  app.post("/api/ai/style", handleStyleGeneration);
+
+  // API endpoint for AI Background Image Generation (Gemini & Aliyun Wanx)
+  const handleImageGeneration = async (req: express.Request, res: express.Response) => {
     try {
-      const { prompt } = req.body;
-      if (!prompt) {
-        return res.status(400).json({ error: "Prompt is required" });
+      const { prompt, provider = "gemini" } = req.body;
+
+      // Length cap & type validation
+      if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
+        return res.status(400).json({ error: "Prompt is required and must be a string" });
+      }
+      if (prompt.length > 2000) {
+        return res.status(400).json({ error: "Prompt must be 2000 characters or fewer" });
+      }
+
+      console.log(`[AI Style Generation - Provider: ${provider}] Length: ${prompt.length} chars\nPrompt:\n"${prompt}"\n`);
+
+      if (provider === "aliyun") {
+        if (!getBailianApiKey()) {
+          return res.status(400).json({
+            error: "Aliyun Bailian API Key (ALIYUN_BAILIAN_API_KEY or DASHSCOPE_API_KEY) is not set in .env file.",
+          });
+        }
+        const data = await generateBailianImage(prompt);
+        return res.json(data);
       }
 
       if (!hasApiKey) {
@@ -283,16 +466,37 @@ Give it a short, elegant name.`,
         return res.status(504).json({ error: "The image generation request timed out. Please try again." });
       }
 
-      res.status(500).json({ error: error.message || "Failed to generate background image" });
+      // RF-04: Sanitized client error response
+      res.status(500).json({ error: "Failed to generate background image. Please try again." });
     }
-  });
+  };
+
+  app.post("/api/gemini/image", handleImageGeneration);
+  app.post("/api/ai/image", handleImageGeneration);
 
   // API endpoint for AI Project Setup Recommendations
   app.post("/api/gemini/setup", async (req, res) => {
     try {
-      const { name, eventType, description, venueName, guestCount } = req.body;
+      const { name, eventType, description, venueName, venueCity, guestCount } = req.body;
+
+      // RF-03: Input validation and length caps
       if (!description && !eventType) {
         return res.status(400).json({ error: "At least eventType or description is required" });
+      }
+      if (name && (typeof name !== "string" || name.length > 100)) {
+        return res.status(400).json({ error: "Name must be a string of 100 characters or fewer" });
+      }
+      if (eventType && (typeof eventType !== "string" || !ALLOWED_EVENT_TYPES.includes(eventType))) {
+        return res.status(400).json({ error: "Invalid eventType provided" });
+      }
+      if (description && (typeof description !== "string" || description.length > 500)) {
+        return res.status(400).json({ error: "Description must be a string of 500 characters or fewer" });
+      }
+      if (venueName && (typeof venueName !== "string" || venueName.length > 100)) {
+        return res.status(400).json({ error: "venueName must be a string of 100 characters or fewer" });
+      }
+      if (venueCity && (typeof venueCity !== "string" || venueCity.length > 100)) {
+        return res.status(400).json({ error: "venueCity must be a string of 100 characters or fewer" });
       }
 
       if (!hasApiKey) {
@@ -335,7 +539,7 @@ Recommend a visual theme and seating defaults. Output colors as hex strings (e.g
         try {
           attempts++;
           response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
               responseMimeType: "application/json",
@@ -408,11 +612,11 @@ Recommend a visual theme and seating defaults. Output colors as hex strings (e.g
       if (combined.includes("timeout") || combined.includes("fetch failed")) {
         return res.status(504).json({ error: "AI service timed out. Your event data has been preserved." });
       }
-      res.status(500).json({ error: error.message || "Failed to generate setup recommendations" });
+
+      // RF-04: Sanitized client error response
+      res.status(500).json({ error: "Failed to generate setup recommendations. Please try again." });
     }
   });
-
-
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
@@ -429,8 +633,11 @@ Recommend a visual theme and seating defaults. Output colors as hex strings (e.g
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  // RF-15: Host binding (127.0.0.1 in dev, 0.0.0.0 in prod)
+  const host = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
+
+  app.listen(PORT, host, () => {
+    console.log(`Server running on http://${host}:${PORT}`);
   });
 }
 
