@@ -48,6 +48,7 @@ export default function PdfExportButton({
   const [layoutType, setLayoutType] = useState<ExportLayoutType>('floorplan');
   const [paperSize, setPaperSize] = useState<'a4' | 'letter'>('a4');
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
+  const [includeLogInfo, setIncludeLogInfo] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
 
   const triggerPDFGeneration = async () => {
@@ -150,7 +151,10 @@ export default function PdfExportButton({
             doc.setFont('Helvetica', 'normal');
             doc.setFontSize(9);
             doc.setTextColor(107, 114, 128);
-            doc.text(`Generated on ${today} | Table ${i + 1} of ${tables.length}`, pageWidth / 2, 18, { align: 'center' });
+            const subTitle = includeLogInfo
+              ? `Generated on ${today} | Table ${i + 1} of ${tables.length}`
+              : `Table ${i + 1} of ${tables.length}`;
+            doc.text(subTitle, pageWidth / 2, 18, { align: 'center' });
 
             doc.setLineWidth(0.3);
             doc.setDrawColor(229, 231, 235);
@@ -317,12 +321,8 @@ export default function PdfExportButton({
               tDoc.setFontSize(10);
               tDoc.setTextColor(107, 114, 128);
               tDoc.text(guest.group || 'Individual', 120, currentY);
-            } else {
-              tDoc.setFont('Helvetica', 'italic');
-              tDoc.setTextColor(156, 163, 175);
-              tDoc.text("-- Vacant Seat --", 45, currentY);
-              tDoc.text("-", 120, currentY);
             }
+            // If vacant seat: leave guest name and affiliation blank (do NOT print -- Vacant Seat --)
 
             // Divider line
             tDoc.setDrawColor(243, 244, 246);
@@ -331,15 +331,18 @@ export default function PdfExportButton({
             currentY += 12;
           }
 
-          // Footer info on each page
-          tDoc.setFont('Times', 'normal');
-          tDoc.setFontSize(9);
-          tDoc.setTextColor(156, 163, 175);
-          tDoc.text(`Printed for ${today} event`, pW / 2, pH - 15, { align: 'center' });
+          // Footer info on each page (only when log info is enabled)
+          if (includeLogInfo) {
+            tDoc.setFont('Times', 'normal');
+            tDoc.setFontSize(9);
+            tDoc.setTextColor(156, 163, 175);
+            tDoc.text(`Printed for ${today} event`, pW / 2, pH - 15, { align: 'center' });
+          }
         });
 
         // Save PDF
-        tDoc.save(`Seating_Table_Sheets_${today.replace(/[\s,]+/g, '_')}.pdf`);
+        const tableDateSuffix = includeLogInfo ? `_${today.replace(/[\s,]+/g, '_')}` : '';
+        tDoc.save(`Seating_Table_Sheets${tableDateSuffix}.pdf`);
         setIsExporting(false);
         setShowOptionsModal(false);
         return;
@@ -379,7 +382,8 @@ export default function PdfExportButton({
           docObj.setFont('Helvetica', 'normal');
           docObj.setFontSize(8);
           docObj.setTextColor(156, 163, 175);
-          docObj.text(`Page ${page} | Printed on ${today}`, pW - 15, pH - 10, { align: 'right' });
+          const pageFooter = includeLogInfo ? `Page ${page} | Printed on ${today}` : `Page ${page}`;
+          docObj.text(pageFooter, pW - 15, pH - 10, { align: 'right' });
           docObj.text("Round Table Seating Planner Dashboard", 15, pH - 10);
         };
 
@@ -475,7 +479,8 @@ export default function PdfExportButton({
           currentY += 6;
         });
 
-        aDoc.save(`Seating_Guest_Directory_${today.replace(/[\s,]+/g, '_')}.pdf`);
+        const guestDirDateSuffix = includeLogInfo ? `_${today.replace(/[\s,]+/g, '_')}` : '';
+        aDoc.save(`Seating_Guest_Directory${guestDirDateSuffix}.pdf`);
         setIsExporting(false);
         setShowOptionsModal(false);
         return;
@@ -484,7 +489,8 @@ export default function PdfExportButton({
 
 
       // Finish export & Save
-      doc.save(`Seating_Plan_${layoutType}_${today.replace(/[\s,]+/g, '_')}.pdf`);
+      const defaultDateSuffix = includeLogInfo ? `_${today.replace(/[\s,]+/g, '_')}` : '';
+      doc.save(`Seating_Plan_${layoutType}${defaultDateSuffix}.pdf`);
       setIsExporting(false);
       setShowOptionsModal(false);
     } catch (err: any) {
@@ -670,6 +676,26 @@ export default function PdfExportButton({
                     </select>
                   </div>
                 )}
+              </div>
+
+              {/* Logging & Date information toggle */}
+              <div className="pt-2 border-t border-gilded-border/50">
+                <label className="flex items-center gap-2.5 p-2 bg-white/70 border border-gilded-border cursor-pointer select-none hover:bg-white transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={includeLogInfo}
+                    onChange={(e) => setIncludeLogInfo(e.target.checked)}
+                    className="w-4 h-4 text-gilded-accent border-gilded-border rounded focus:ring-gilded-accent cursor-pointer accent-[#C9A96E]"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-semibold text-gilded-ink font-sans">
+                      Include Log Information (Printing Date & Timestamps)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-sans">
+                      Default is disabled for clean, non-dated presentation sheets
+                    </span>
+                  </div>
+                </label>
               </div>
             </div>
 

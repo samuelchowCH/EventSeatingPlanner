@@ -63,6 +63,8 @@ export default function TableVisualizer({
   const [showOptions, setShowOptions] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'clear' | 'reset' | 'delete' | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const initialTableSnapshot = useRef<Partial<Table> | null>(null);
+
   const [editName, setEditName] = useState(table.name);
   const [editCapacity, setEditCapacity] = useState(table.maxSeats);
   const [editColor, setEditColor] = useState(table.color);
@@ -76,6 +78,135 @@ export default function TableVisualizer({
   const [editGridCellSize, setEditGridCellSize] = useState(table.gridCellSize || 64);
   const [editShowSeatNumbers, setEditShowSeatNumbers] = useState(table.showSeatNumbers !== false);
   const [showQuickSelectIndex, setShowQuickSelectIndex] = useState<number | null>(null);
+
+  // Sync edit state when table changes outside of active editing
+  useEffect(() => {
+    if (!isEditing) {
+      setEditName(table.name);
+      setEditCapacity(table.maxSeats);
+      setEditColor(table.color);
+      setEditShape(table.shape || 'round');
+      setEditFontColor(table.fontColor || '#1e293b');
+      setEditFontSize(table.fontSize || 16);
+      setEditScale(table.scale || 1.0);
+      setEditSeminarRows(table.seminarRows || 4);
+      setEditSeminarSeatsPerRow(table.seminarSeatsPerRow || 8);
+      setEditSeminarDirection(table.seminarDirection || 'Top');
+      setEditGridCellSize(table.gridCellSize || 64);
+      setEditShowSeatNumbers(table.showSeatNumbers !== false);
+    }
+  }, [table, isEditing]);
+
+  const handleStartEdit = () => {
+    initialTableSnapshot.current = {
+      name: table.name,
+      maxSeats: table.maxSeats,
+      color: table.color,
+      shape: table.shape || 'round',
+      fontColor: table.fontColor || '#1e293b',
+      fontSize: table.fontSize || 16,
+      scale: table.scale || 1.0,
+      seminarRows: table.seminarRows || 4,
+      seminarSeatsPerRow: table.seminarSeatsPerRow || 8,
+      seminarDirection: table.seminarDirection || 'Top',
+      gridCellSize: table.gridCellSize || 64,
+      showSeatNumbers: table.showSeatNumbers !== false,
+    };
+    setEditName(table.name);
+    setEditCapacity(table.maxSeats);
+    setEditColor(table.color);
+    setEditShape(table.shape || 'round');
+    setEditFontColor(table.fontColor || '#1e293b');
+    setEditFontSize(table.fontSize || 16);
+    setEditScale(table.scale || 1.0);
+    setEditSeminarRows(table.seminarRows || 4);
+    setEditSeminarSeatsPerRow(table.seminarSeatsPerRow || 8);
+    setEditSeminarDirection(table.seminarDirection || 'Top');
+    setEditGridCellSize(table.gridCellSize || 64);
+    setEditShowSeatNumbers(table.showSeatNumbers !== false);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    if (initialTableSnapshot.current) {
+      onUpdateTable(table.id, initialTableSnapshot.current);
+    }
+    setIsEditing(false);
+    setShowOptions(false);
+    initialTableSnapshot.current = null;
+  };
+
+  const handleSaveEdit = () => {
+    setIsEditing(false);
+    setShowOptions(false);
+    initialTableSnapshot.current = null;
+  };
+
+  const handleNameChange = (val: string) => {
+    setEditName(val);
+    onUpdateTable(table.id, { name: val });
+  };
+
+  const handleCapacityChange = (val: number) => {
+    setEditCapacity(val);
+    onUpdateTable(table.id, { maxSeats: val });
+  };
+
+  const handleShapeChange = (val: any) => {
+    setEditShape(val);
+    onUpdateTable(table.id, { shape: val });
+  };
+
+  const handleColorChange = (val: string) => {
+    setEditColor(val);
+    onUpdateTable(table.id, { color: val });
+  };
+
+  const handleFontColorChange = (val: string) => {
+    setEditFontColor(val);
+    onUpdateTable(table.id, { fontColor: val });
+  };
+
+  const handleFontSizeChange = (val: number) => {
+    setEditFontSize(val);
+    onUpdateTable(table.id, { fontSize: val });
+  };
+
+  const handleScaleChange = (val: number) => {
+    setEditScale(val);
+    onUpdateTable(table.id, { scale: val });
+  };
+
+  const handleSeminarRowsChange = (val: number) => {
+    setEditSeminarRows(val);
+    onUpdateTable(table.id, {
+      seminarRows: val,
+      maxSeats: val * editSeminarSeatsPerRow,
+    });
+  };
+
+  const handleSeminarSeatsPerRowChange = (val: number) => {
+    setEditSeminarSeatsPerRow(val);
+    onUpdateTable(table.id, {
+      seminarSeatsPerRow: val,
+      maxSeats: editSeminarRows * val,
+    });
+  };
+
+  const handleSeminarDirectionChange = (val: any) => {
+    setEditSeminarDirection(val);
+    onUpdateTable(table.id, { seminarDirection: val });
+  };
+
+  const handleGridCellSizeChange = (val: number) => {
+    setEditGridCellSize(val);
+    onUpdateTable(table.id, { gridCellSize: val });
+  };
+
+  const handleShowSeatNumbersChange = (val: boolean) => {
+    setEditShowSeatNumbers(val);
+    onUpdateTable(table.id, { showSeatNumbers: val });
+  };
 
   const [isFineTuning, setIsFineTuning] = useState(false);
   const [localDragOffsets, setLocalDragOffsets] = useState<Record<string, { x: number; y: number }>>({});
@@ -673,25 +804,6 @@ export default function TableVisualizer({
     setShowQuickSelectIndex(null);
   };
 
-  const handleSaveEdit = () => {
-    onUpdateTable(table.id, {
-      name: editName,
-      maxSeats: editShape === 'seminar' ? editSeminarRows * editSeminarSeatsPerRow : Number(editCapacity),
-      color: editColor,
-      shape: editShape,
-      fontColor: editFontColor,
-      fontSize: Number(editFontSize),
-      scale: editShape === 'seminar' ? 1.0 : Number(editScale),
-      seminarRows: editShape === 'seminar' ? editSeminarRows : undefined,
-      seminarSeatsPerRow: editShape === 'seminar' ? editSeminarSeatsPerRow : undefined,
-      seminarDirection: editShape === 'seminar' ? editSeminarDirection : undefined,
-      gridCellSize: editShape === 'seminar' ? editGridCellSize : undefined,
-      showSeatNumbers: editShowSeatNumbers,
-    });
-    setIsEditing(false);
-    setShowOptions(false);
-  };
-
   const handleBatchApply = () => {
     const settings = {
       maxSeats: Number(editCapacity),
@@ -711,6 +823,7 @@ export default function TableVisualizer({
     }
     setIsEditing(false);
     setShowOptions(false);
+    initialTableSnapshot.current = null;
   };
 
   const colorPresets = [
@@ -773,21 +886,7 @@ export default function TableVisualizer({
                 {!isEditing ? (
                   <div className="space-y-1.5 text-xs">
                     <button
-                      onClick={() => {
-                        setEditName(table.name);
-                        setEditCapacity(table.maxSeats);
-                        setEditColor(table.color);
-                        setEditShape(table.shape || 'round');
-                        setEditFontColor(table.fontColor || '#1e293b');
-                        setEditFontSize(table.fontSize || 16);
-                        setEditScale(table.scale || 1.0);
-                        setEditSeminarRows(table.seminarRows || 4);
-                        setEditSeminarSeatsPerRow(table.seminarSeatsPerRow || 8);
-                        setEditSeminarDirection(table.seminarDirection || 'Top');
-                        setEditGridCellSize(table.gridCellSize || 64);
-                        setEditShowSeatNumbers(table.showSeatNumbers !== false);
-                        setIsEditing(true);
-                      }}
+                      onClick={handleStartEdit}
                       className="w-full text-left p-2 hover:bg-gray-50 rounded-lg text-gray-700 font-sans flex items-center gap-2 cursor-pointer"
                     >
                       <Settings size={14} className="text-gray-400" />
@@ -905,7 +1004,7 @@ export default function TableVisualizer({
                           <input
                             type="text"
                             value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
+                            onChange={(e) => handleNameChange(e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-indigo-500 text-xs font-sans"
                           />
                         </div>
@@ -916,7 +1015,7 @@ export default function TableVisualizer({
                               <label className="block text-[10px] text-gray-500 mb-0.5 font-medium">Grid Rows</label>
                               <select
                                 value={editSeminarRows}
-                                onChange={(e) => setEditSeminarRows(Number(e.target.value))}
+                                onChange={(e) => handleSeminarRowsChange(Number(e.target.value))}
                                 className="w-full border border-gray-200 bg-white rounded px-1.5 py-0.5 text-xs font-sans"
                               >
                                 {[2, 3, 4, 5, 6, 7, 8].map(r => (
@@ -928,7 +1027,7 @@ export default function TableVisualizer({
                               <label className="block text-[10px] text-gray-500 mb-0.5 font-medium">Seats / Row</label>
                               <select
                                 value={editSeminarSeatsPerRow}
-                                onChange={(e) => setEditSeminarSeatsPerRow(Number(e.target.value))}
+                                onChange={(e) => handleSeminarSeatsPerRowChange(Number(e.target.value))}
                                 className="w-full border border-gray-200 bg-white rounded px-1.5 py-0.5 text-xs font-sans"
                               >
                                 {[4, 5, 6, 7, 8, 9, 10, 12, 14, 16].map(s => (
@@ -941,7 +1040,7 @@ export default function TableVisualizer({
                             <label className="block text-[10px] text-gray-500 mb-0.5 font-medium">Target Stage Position</label>
                             <select
                               value={editSeminarDirection}
-                              onChange={(e) => setEditSeminarDirection(e.target.value as any)}
+                              onChange={(e) => handleSeminarDirectionChange(e.target.value as any)}
                               className="w-full border border-gray-200 bg-white rounded px-1.5 py-0.5 text-xs font-sans"
                             >
                               <option value="Top">Stage is at Top</option>
@@ -962,7 +1061,7 @@ export default function TableVisualizer({
                             min="32"
                             max="120"
                             value={editGridCellSize}
-                            onChange={(e) => setEditGridCellSize(Number(e.target.value))}
+                            onChange={(e) => handleGridCellSizeChange(Number(e.target.value))}
                             className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                           />
                         </div>
@@ -974,8 +1073,8 @@ export default function TableVisualizer({
                               <button
                                 key={c}
                                 type="button"
-                                onClick={() => setEditColor(c)}
-                                className={`w-5 h-5 rounded-full border transition-all ${editColor === c ? 'ring-2 ring-indigo-500 border-white scale-110' : 'border-gray-200'
+                                onClick={() => handleColorChange(c)}
+                                className={`w-5 h-5 rounded-full border transition-all cursor-pointer ${editColor === c ? 'ring-2 ring-indigo-500 border-white scale-110' : 'border-gray-200'
                                   }`}
                                 style={{ backgroundColor: c }}
                               />
@@ -989,13 +1088,13 @@ export default function TableVisualizer({
                             <input
                               type="color"
                               value={editFontColor}
-                              onChange={(e) => setEditFontColor(e.target.value)}
+                              onChange={(e) => handleFontColorChange(e.target.value)}
                               className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0 bg-transparent flex-shrink-0"
                             />
                             <input
                               type="text"
                               value={editFontColor}
-                              onChange={(e) => setEditFontColor(e.target.value)}
+                              onChange={(e) => handleFontColorChange(e.target.value)}
                               className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-mono uppercase"
                               placeholder="#1E293B"
                             />
@@ -1012,7 +1111,7 @@ export default function TableVisualizer({
                             min="10"
                             max="24"
                             value={editFontSize}
-                            onChange={(e) => setEditFontSize(Number(e.target.value))}
+                            onChange={(e) => handleFontSizeChange(Number(e.target.value))}
                             className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                           />
                         </div>
@@ -1022,7 +1121,7 @@ export default function TableVisualizer({
                             type="checkbox"
                             id="editShowSeatNumbersSeminar"
                             checked={editShowSeatNumbers}
-                            onChange={(e) => setEditShowSeatNumbers(e.target.checked)}
+                            onChange={(e) => handleShowSeatNumbersChange(e.target.checked)}
                             className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
                           />
                           <label htmlFor="editShowSeatNumbersSeminar" className="text-gray-700 font-medium select-none cursor-pointer">
@@ -1032,17 +1131,17 @@ export default function TableVisualizer({
 
                         <div className="flex items-center justify-end gap-1.5 pt-2">
                           <button
-                            onClick={() => setIsEditing(false)}
-                            className="px-2 py-1 text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            onClick={handleCancelEdit}
+                            className="px-2 py-1 text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
                           <button
                             onClick={handleSaveEdit}
-                            className="px-2.5 py-1 text-white bg-indigo-600 font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1 text-white bg-indigo-600 font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1 cursor-pointer"
                           >
                             <Check size={12} />
-                            Save
+                            Done
                           </button>
                         </div>
                       </>
@@ -1054,7 +1153,7 @@ export default function TableVisualizer({
                           <input
                             type="text"
                             value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
+                            onChange={(e) => handleNameChange(e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-indigo-500 text-xs font-sans"
                           />
                         </div>
@@ -1063,8 +1162,8 @@ export default function TableVisualizer({
                           <label className="block text-gray-500 mb-1 font-medium">Capacity (Seats)</label>
                           <select
                             value={editCapacity}
-                            onChange={(e) => setEditCapacity(Number(e.target.value))}
-                            className="w-full border border-gray-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-indigo-500 text-xs font-sans bg-white"
+                            onChange={(e) => handleCapacityChange(Number(e.target.value))}
+                            className="w-full border border-gray-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-indigo-500 text-xs font-sans bg-white cursor-pointer"
                           >
                             {[4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16].map((num) => (
                               <option key={num} value={num}>{num} Seats</option>
@@ -1076,8 +1175,8 @@ export default function TableVisualizer({
                           <label className="block text-gray-500 mb-1 font-medium">Table Shape</label>
                           <select
                             value={editShape}
-                            onChange={(e) => setEditShape(e.target.value as any)}
-                            className="w-full border border-gray-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-indigo-500 text-xs font-sans bg-white"
+                            onChange={(e) => handleShapeChange(e.target.value as any)}
+                            className="w-full border border-gray-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-indigo-500 text-xs font-sans bg-white cursor-pointer"
                           >
                             <option value="round">Round Table</option>
                             <option value="rectangle">Rectangle Table</option>
@@ -1094,8 +1193,8 @@ export default function TableVisualizer({
                               <button
                                 key={c}
                                 type="button"
-                                onClick={() => setEditColor(c)}
-                                className={`w-5 h-5 rounded-full border transition-all ${editColor === c ? 'ring-2 ring-indigo-500 border-white scale-110' : 'border-gray-200'
+                                onClick={() => handleColorChange(c)}
+                                className={`w-5 h-5 rounded-full border transition-all cursor-pointer ${editColor === c ? 'ring-2 ring-indigo-500 border-white scale-110' : 'border-gray-200'
                                   }`}
                                 style={{ backgroundColor: c }}
                               />
@@ -1109,13 +1208,13 @@ export default function TableVisualizer({
                             <input
                               type="color"
                               value={editFontColor}
-                              onChange={(e) => setEditFontColor(e.target.value)}
+                              onChange={(e) => handleFontColorChange(e.target.value)}
                               className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0 bg-transparent flex-shrink-0"
                             />
                             <input
                               type="text"
                               value={editFontColor}
-                              onChange={(e) => setEditFontColor(e.target.value)}
+                              onChange={(e) => handleFontColorChange(e.target.value)}
                               className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-mono uppercase"
                               placeholder="#1E293B"
                             />
@@ -1132,7 +1231,7 @@ export default function TableVisualizer({
                             min="10"
                             max="24"
                             value={editFontSize}
-                            onChange={(e) => setEditFontSize(Number(e.target.value))}
+                            onChange={(e) => handleFontSizeChange(Number(e.target.value))}
                             className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                           />
                         </div>
@@ -1148,7 +1247,7 @@ export default function TableVisualizer({
                             max="2.5"
                             step="0.1"
                             value={editScale}
-                            onChange={(e) => setEditScale(Number(e.target.value))}
+                            onChange={(e) => handleScaleChange(Number(e.target.value))}
                             className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                           />
                         </div>
@@ -1158,7 +1257,7 @@ export default function TableVisualizer({
                             type="checkbox"
                             id="editShowSeatNumbersDining"
                             checked={editShowSeatNumbers}
-                            onChange={(e) => setEditShowSeatNumbers(e.target.checked)}
+                            onChange={(e) => handleShowSeatNumbersChange(e.target.checked)}
                             className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
                           />
                           <label htmlFor="editShowSeatNumbersDining" className="text-gray-700 font-medium select-none cursor-pointer">
@@ -1168,22 +1267,22 @@ export default function TableVisualizer({
 
                         <div className="flex items-center justify-end gap-1.5 pt-2">
                           <button
-                            onClick={() => setIsEditing(false)}
-                            className="px-2 py-1 text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            onClick={handleCancelEdit}
+                            className="px-2 py-1 text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
                           <button
                             onClick={handleSaveEdit}
-                            className="px-2.5 py-1 text-white bg-indigo-600 font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1 text-white bg-indigo-600 font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1 cursor-pointer"
                           >
                             <Check size={12} />
-                            Save
+                            Done
                           </button>
                           <button
                             type="button"
                             onClick={handleBatchApply}
-                            className="px-2.5 py-1 text-white bg-emerald-600 font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1 text-white bg-emerald-600 font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1 cursor-pointer"
                             title="Apply these style & capacity settings to all other tables"
                           >
                             <RefreshCw size={12} />
