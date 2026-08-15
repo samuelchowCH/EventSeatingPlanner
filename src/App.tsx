@@ -700,9 +700,14 @@ export default function App() {
       <header className="bg-white border-b border-gilded-border sticky top-0 z-40">
         <div className="max-w-[96%] mx-auto px-4 sm:px-6 lg:px-8 py-3.5 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-4">
           <div className="flex items-center gap-3 justify-start">
-            <div className="bg-gilded-ink text-gilded-accent p-2.5 rounded-none shadow-xs">
-              <Table size={20} />
-            </div>
+            <img
+              src="/logo.jpg"
+              alt="Logo"
+              className="w-9 h-9 object-cover rounded-none border border-gilded-border/60 shadow-xs"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = 'none';
+              }}
+            />
             <div>
               <h1 className="text-lg font-bold text-gilded-ink tracking-tight font-serif">
                 Seating Planner
