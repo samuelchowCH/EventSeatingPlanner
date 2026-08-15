@@ -141,6 +141,7 @@ export default function LayoutDesigner({ tables, layoutElements, onUpdateLayoutE
     ];
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState<boolean>(false);
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [sidebarTab, setSidebarTab] = useState<'library' | 'tables' | 'properties'>('library');
   const [libraryPage, setLibraryPage] = useState<'elements' | 'geometry'>('elements');
@@ -158,6 +159,12 @@ export default function LayoutDesigner({ tables, layoutElements, onUpdateLayoutE
   useEffect(() => {
     onUpdateLayoutElements(elements);
   }, [elements, onUpdateLayoutElements]);
+
+  const handleClearCanvas = () => {
+    setElements([]);
+    setSelectedId(null);
+    setConfirmClear(false);
+  };
 
   // Synchronize custom table dimensions and auto-clean orphaned table proxies
   useEffect(() => {
@@ -1195,14 +1202,47 @@ export default function LayoutDesigner({ tables, layoutElements, onUpdateLayoutE
             </div>
           )}
 
-          {/* Sizing Status Label */}
-          <div className="mb-3 flex items-center justify-between w-full max-w-[95%]">
+          {/* Sizing Status Label & Canvas Actions */}
+          <div className="mb-3 flex flex-wrap items-center justify-between w-full max-w-[95%] gap-2">
             <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
               Artboard Size: <strong className="text-slate-700">{paperSize} ({orientation})</strong> • Grid snap: <strong className="text-slate-700">{snapToGrid ? `${gridSize}px` : 'OFF'}</strong>
             </span>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
-              Total elements: <strong className="text-slate-700">{elements.length}</strong> ({tableProxiesCount} tables)
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                Total elements: <strong className="text-slate-700">{elements.length}</strong> ({tableProxiesCount} tables)
+              </span>
+
+              {confirmClear ? (
+                <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 px-2.5 py-0.5 animate-fadeIn">
+                  <span className="text-[10px] font-sans font-bold text-red-700">Clear all {elements.length} objects?</span>
+                  <button
+                    type="button"
+                    onClick={handleClearCanvas}
+                    className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClear(false)}
+                    className="px-2 py-0.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 text-[10px] cursor-pointer"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmClear(true)}
+                  disabled={elements.length === 0}
+                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-red-600 hover:text-white hover:bg-red-600 border border-red-200 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-3xs"
+                  title="Clear all architectural elements and tables from canvas"
+                >
+                  <Trash2 size={11} />
+                  <span>Clear Canvas</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Artboard paper viewport layer wrapper */}
@@ -1542,6 +1582,32 @@ export default function LayoutDesigner({ tables, layoutElements, onUpdateLayoutE
                         fill="#D97706"
                         className="cursor-alias"
                       />
+                    )}
+
+                    {/* Quick Delete small button on top-right of selected object */}
+                    {isSelected && (
+                      <g
+                        transform={`translate(${boxX + boxWidth}, ${boxY})`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setElements(prev => prev.filter(item => item.id !== el.id));
+                          setSelectedId(null);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="cursor-pointer group/del"
+                      >
+                        <circle
+                          cx={0}
+                          cy={0}
+                          r={9}
+                          fill="#EF4444"
+                          stroke="#FFFFFF"
+                          strokeWidth="1.5"
+                          className="transition-all group-hover/del:fill-red-700 group-hover/del:scale-110 drop-shadow-xs"
+                        />
+                        <line x1={-3} y1={-3} x2={3} y2={3} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+                        <line x1={3} y1={-3} x2={-3} y2={3} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+                      </g>
                     )}
                   </g>
                 );

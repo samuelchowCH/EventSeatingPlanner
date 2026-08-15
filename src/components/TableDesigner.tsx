@@ -58,19 +58,6 @@ export default function TableDesigner({ onAddTableFromTemplate, onBackToWorkspac
   const canvasRef = useRef<SVGSVGElement | null>(null);
   const [draggingSeatId, setDraggingSeatId] = useState<string | null>(null);
 
-  // Dynamic panel width ratio adjustments (temporary developer slide bar)
-  const [sideWidth, setSideWidth] = useState<number>(24); // default 24%
-  const [isLg, setIsLg] = useState<boolean>(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsLg(window.innerWidth >= 1024);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   // Load saved templates from localStorage on mount
   useEffect(() => {
     const cached = localStorage.getItem('seating_planner_templates');
@@ -764,13 +751,21 @@ export default function TableDesigner({ onAddTableFromTemplate, onBackToWorkspac
               <span className="px-2.5 py-0.5 bg-gilded-accent text-gilded-ink text-[10px] font-extrabold rounded-none font-mono uppercase tracking-wider">
                 Pro Feature
               </span>
-              <h1 className="text-xl font-bold text-gilded-ink tracking-tight font-serif">
-                Dynamic Table Builder Studio
-              </h1>
+              <div className="relative group inline-flex items-center gap-1.5 cursor-help">
+                <h1 className="text-xl font-bold text-gilded-ink tracking-tight font-serif">
+                  Dynamic Table Builder Studio
+                </h1>
+                <HelpCircle size={15} className="text-gray-400 group-hover:text-gilded-accent transition-colors shrink-0" />
+                
+                {/* Hover Description Tooltip */}
+                <div className="absolute left-0 top-full mt-2 w-80 p-3 bg-gilded-ink text-gilded-bg border border-gilded-border/50 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none text-xs font-sans font-normal leading-relaxed">
+                  <div className="font-mono text-[9px] uppercase tracking-wider text-gilded-accent font-bold mb-1">
+                    Studio Overview
+                  </div>
+                  Design bespoke banquet tables, place custom geometric boundaries, place manual seat layouts, and save templates to local libraries.
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-gray-500 font-sans mt-1">
-              Design bespoke banquet tables, place custom geometric boundaries, place manual seat layouts, and save templates to local libraries.
-            </p>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -804,51 +799,11 @@ export default function TableDesigner({ onAddTableFromTemplate, onBackToWorkspac
           </div>
         )}
 
-        {/* Temporary Developer Width Ratio Slider */}
-        <div className="bg-white border border-gilded-border p-4 mb-6 shadow-3xs flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <Sliders size={16} className="text-gilded-accent" />
-            <div>
-              <h2 className="text-xs font-bold text-gilded-ink font-mono uppercase tracking-wider">
-                Adaptive Layout Width Controls (Temporary)
-              </h2>
-              <p className="text-[10px] text-gray-500 font-sans">
-                Adjust side panels width ratio dynamically on desktop screens to determine the optimal layout.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto max-w-md bg-gilded-faint px-3.5 py-2 border border-gilded-border">
-            <span className="text-[10px] font-bold font-mono text-gray-500 whitespace-nowrap">
-              Left Column: {sideWidth}%
-            </span>
-            <input
-              type="range"
-              min="10"
-              max="35"
-              step="1"
-              value={sideWidth}
-              onChange={(e) => setSideWidth(Number(e.target.value))}
-              className="w-full h-1.5 bg-gray-200 accent-gilded-accent cursor-ew-resize appearance-none rounded-lg"
-            />
-            <span className="text-[10px] font-bold font-mono text-gray-500 whitespace-nowrap">
-              Right Column: {sideWidth}%
-            </span>
-            <span className="text-[10px] font-extrabold font-mono text-gilded-accent bg-gilded-ink px-1.5 py-0.5 whitespace-nowrap">
-              Center Workspace: {100 - 2 * sideWidth}%
-            </span>
-          </div>
-        </div>
-
         {/* Main Work Grid */}
-        <div 
-          className="grid grid-cols-1 lg:grid gap-6 items-start"
-          style={{
-            gridTemplateColumns: isLg ? `${sideWidth}% 1fr ${sideWidth}%` : undefined
-          }}
-        >
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* LEFT PANEL: SHAPE & DIMENSION CONTROLS */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:col-span-3">
             
             {/* Template Identification & Geometry Select */}
             <div className="bg-white rounded-none border border-gilded-border p-5 shadow-3xs space-y-4">
@@ -1127,7 +1082,7 @@ export default function TableDesigner({ onAddTableFromTemplate, onBackToWorkspac
           </div>
 
           {/* CENTER PANEL: INTERACTIVE SVG EDITING WORKSPACE */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-6">
             
             {/* Guidelines tooltip */}
             <div className="bg-white rounded-none border border-gilded-border p-3.5 flex items-start gap-2.5 text-[11px] text-gray-500 leading-normal">
@@ -1272,7 +1227,7 @@ export default function TableDesigner({ onAddTableFromTemplate, onBackToWorkspac
           </div>
 
           {/* RIGHT PANEL: DETAIL EDIT PANEL & PRESETS */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:col-span-3">
             
             {/* Detailed seat visual customizer */}
             {selectedSeat ? (

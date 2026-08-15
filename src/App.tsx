@@ -1334,13 +1334,6 @@ export default function App() {
       ) : (
         <div className="text-center py-20 text-gray-400 font-mono text-xs">View not found.</div>
       )}
-      
-      {/* Minimalistic Elegant Page Footer */}
-      <footer className="max-w-[96%] mx-auto px-4 sm:px-6 lg:px-8 py-10 border-t border-gray-50 text-center">
-        <p className="text-xs text-gray-400 font-mono">
-          © {new Date().getFullYear()} Round Table Seating Planner. Beautiful single-view dashboard designed for maximum productivity.
-        </p>
-      </footer>
 
     </div>
   );
