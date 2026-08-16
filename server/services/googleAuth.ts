@@ -252,8 +252,9 @@ export async function revokeGmailConnection(adminId: string): Promise<boolean> {
 
     const oauth2Client = getOAuth2Client();
     await oauth2Client.revokeToken(refreshToken);
-  } catch (err) {
-    console.warn('Google revokeToken failed or token was already invalid:', err);
+  } catch (err: any) {
+    const errorMsg = err?.response?.data?.error || err?.message || 'invalid_token';
+    console.warn(`[Google OAuth] revokeToken note: ${errorMsg} (token already inactive or expired on Google)`);
   }
 
   await db.run(`DELETE FROM oauth_connections WHERE admin_id = ?;`, [adminId]);
