@@ -20,8 +20,9 @@ import TableDesigner from './components/TableDesigner';
 import LayoutDesigner from './components/LayoutDesigner';
 import { InvitationStudio } from './components/InvitationStudio';
 import ProjectSetupWizard, { WizardFormData } from './components/ProjectSetupWizard';
+import EventSummaryModal from './components/EventSummaryModal';
 import { autoAssignSeating, getSampleData, getLectureSampleData } from './utils/seatingHelper';
-import { Users, LayoutGrid, ClipboardList, Utensils, Calendar, Sparkles, HelpCircle, Table, RefreshCw, Tag, Trash2, Palette, Layers, Check, Plus, Mail, X } from 'lucide-react';
+import { Users, LayoutGrid, ClipboardList, Utensils, Calendar, Sparkles, HelpCircle, Table, RefreshCw, Tag, Trash2, Palette, Layers, Check, Plus, Mail, X, Eye } from 'lucide-react';
 
 export default function App() {
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -41,6 +42,7 @@ export default function App() {
   const [newEventName, setNewEventName] = useState('');
   const [newEventDate, setNewEventDate] = useState('');
   const [showWizard, setShowWizard] = useState(false);
+  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
 
   // Gmail Header Connection Indicator State
   const [gmailConnected, setGmailConnected] = useState(false);
@@ -304,6 +306,9 @@ export default function App() {
   const handleDeleteEvent = (id: string) => {
     const updatedEvents = events.filter(e => e.id !== id);
     setEvents(updatedEvents);
+    if (viewingEvent?.id === id) {
+      setViewingEvent(null);
+    }
     if (activeEventId === id) {
       if (updatedEvents.length > 0) {
         setActiveEventId(updatedEvents[0].id);
@@ -311,6 +316,16 @@ export default function App() {
         setActiveEventId(null);
         setActiveTab('events');
       }
+    }
+  };
+
+  const handleUpdateEvent = (updatedEvent: Event) => {
+    setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+    setViewingEvent(updatedEvent);
+    if (activeEventId === updatedEvent.id) {
+      if (updatedEvent.defaultTableShape) setDefaultTableShape(updatedEvent.defaultTableShape);
+      if (updatedEvent.defaultTableSeats) setDefaultTableSeats(updatedEvent.defaultTableSeats);
+      if (updatedEvent.arenaMode) setArenaMode(updatedEvent.arenaMode);
     }
   };
 
@@ -695,6 +710,18 @@ export default function App() {
           />
         </div>
       )}
+
+      {/* Event Summary & Specifications Modal Overlay */}
+      <EventSummaryModal
+        event={viewingEvent}
+        isOpen={!!viewingEvent}
+        onClose={() => setViewingEvent(null)}
+        onSave={handleUpdateEvent}
+        onOpenPlan={(eventId) => {
+          setActiveEventId(eventId);
+          setActiveTab('floorplan');
+        }}
+      />
       
       {/* Upper Navigation Dashboard Header */}
       <header className="bg-white border-b border-gilded-border sticky top-0 z-40">
@@ -929,7 +956,15 @@ export default function App() {
                               }}
                               className="flex-1 py-1.5 bg-gilded-ink hover:bg-black text-gilded-accent text-[11px] font-bold font-serif uppercase tracking-wider rounded-none border border-gilded-border transition-colors cursor-pointer text-center"
                             >
-                              Open Seating Plan
+                              Open Plan
+                            </button>
+                            <button
+                              onClick={() => setViewingEvent(evt)}
+                              className="px-2.5 py-1.5 bg-gilded-faint hover:bg-gilded-accent hover:text-gilded-ink text-gray-700 text-[11px] font-bold font-serif uppercase tracking-wider rounded-none border border-gilded-border transition-colors cursor-pointer flex items-center gap-1"
+                              title="View & Edit Event Summary"
+                            >
+                              <Eye size={12} />
+                              <span className="hidden sm:inline">Summary</span>
                             </button>
                             <button
                               onClick={() => {
@@ -937,7 +972,7 @@ export default function App() {
                                   handleDeleteEvent(evt.id);
                                 }
                               }}
-                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-100 transition-colors cursor-pointer"
+                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-none border border-red-100 transition-colors cursor-pointer"
                               title="Delete Plan"
                             >
                               <Trash2 size={13} />
@@ -1057,22 +1092,31 @@ export default function App() {
               {/* Seating plan visualizer canvas */}
               <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-xs">
                 <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-3 flex-wrap gap-3">
-                  <div>
-                    <h2 className="text-base font-bold text-gray-900 tracking-tight font-sans flex items-center gap-2">
-                      <span>Seating Floorplan Arena</span>
-                      <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-full font-bold ${
-                        arenaMode === 'dining' 
-                          ? 'bg-amber-100 text-amber-800 border border-amber-200' 
-                          : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                      }`}>
-                        {arenaMode === 'dining' ? '🍽️ Banquet Mode' : '🎓 Lecture Mode'}
-                      </span>
-                    </h2>
-                    <p className="text-xs text-gray-400 font-mono mt-0.5">
-                      {arenaMode === 'dining' 
-                        ? 'Click a vacant chair, drop a guest, or select any seat to perform standard moves and swaps.'
-                        : 'Deploy seminar rows facing the podium, or drag guest capsules onto classroom tables.'}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <div className="relative group inline-flex items-center gap-1.5 cursor-help">
+                      <h2 className="text-base font-bold text-gray-900 tracking-tight font-sans">
+                        Seating Floorplan Arena
+                      </h2>
+                      <HelpCircle size={14} className="text-gray-400 group-hover:text-gilded-accent transition-colors shrink-0" />
+
+                      {/* Hover Description Tooltip */}
+                      <div className="absolute left-0 top-full mt-2 w-80 p-3 bg-gilded-ink text-gilded-bg border border-gilded-border/50 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none text-xs font-sans font-normal leading-relaxed">
+                        <div className="font-mono text-[9px] uppercase tracking-wider text-gilded-accent font-bold mb-1">
+                          Arena Guidance
+                        </div>
+                        {arenaMode === 'dining' 
+                          ? 'Click a vacant chair, drop a guest, or select any seat to perform standard moves and swaps.'
+                          : 'Deploy seminar rows facing the podium, or drag guest capsules onto classroom tables.'}
+                      </div>
+                    </div>
+
+                    <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-full font-bold ${
+                      arenaMode === 'dining' 
+                        ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                        : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                    }`}>
+                      {arenaMode === 'dining' ? 'Banquet Mode' : 'Lecture Mode'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2" data-html2canvas-ignore="true">
                     <button

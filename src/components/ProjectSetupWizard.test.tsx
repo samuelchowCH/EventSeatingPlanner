@@ -181,31 +181,19 @@ describe('ProjectSetupWizard', () => {
     expect(mockCancel).toHaveBeenCalledOnce();
   });
 
-  it('AI failure preserves form data and shows error message', async () => {
+  it('navigates through Step 4 Visual Preferences and Step 5 Seating Defaults', async () => {
     renderWizard();
-    fillStep1('Wedding With AI', 'Wedding');
+    fillStep1('Seminar 2026', 'Seminar');
     fireEvent.click(screen.getByRole('button', { name: /Next/i }));
     fireEvent.click(screen.getByRole('button', { name: /Next/i }));
-    // fill description so AI has something
-    fireEvent.change(screen.getByLabelText(/Event Description/i), { target: { value: 'Romantic garden wedding' } });
     fireEvent.click(screen.getByRole('button', { name: /Next/i }));
-    // On step 4
+    // Step 4
     expect(screen.queryByText('Visual Preferences')).toBeTruthy();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Get AI suggestions/i }));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryAllByRole('alert', { hidden: true }).length).toBeGreaterThan(0);
-    }, { timeout: 3000 });
-
-    // Name is still preserved (not wiped on AI failure)
-    // Navigate back to step 1 to verify
-    fireEvent.click(screen.getByRole('button', { name: /Back/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Back/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Back/i }));
-    const nameInput = screen.getByLabelText(/Event Name/i) as HTMLInputElement;
-    expect(nameInput.value).toBe('Wedding With AI');
+    fireEvent.click(screen.getByRole('button', { name: /Lecture Hall/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+    // Step 5
+    expect(screen.queryByText('Seating Defaults')).toBeTruthy();
+    expect(screen.queryByText('Banana')).toBeNull();
+    expect(screen.queryByText('Nano')).toBeNull();
   });
 });

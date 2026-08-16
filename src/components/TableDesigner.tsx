@@ -748,9 +748,6 @@ export default function TableDesigner({ onAddTableFromTemplate, onBackToWorkspac
         <div className="bg-white border border-gilded-border rounded-none p-6 mb-6 shadow-3xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-gilded-accent text-gilded-ink text-[10px] font-extrabold rounded-none font-mono uppercase tracking-wider">
-                Pro Feature
-              </span>
               <div className="relative group inline-flex items-center gap-1.5 cursor-help">
                 <h1 className="text-xl font-bold text-gilded-ink tracking-tight font-serif">
                   Dynamic Table Builder Studio

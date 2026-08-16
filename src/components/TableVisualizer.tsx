@@ -1877,7 +1877,7 @@ export default function TableVisualizer({
                 top: coords.y - chairHeight / 2 + dragY,
                 width: chairWidth,
                 height: chairHeight,
-                transform: guest ? 'none' : `rotate(${seatRotation}deg)`,
+                transform: 'none',
               }}
               className={`z-10 transition-transform duration-200 ${!guest ? 'empty-chair-container' : ''}`}
               onDragOver={handleDragOver}
@@ -1928,7 +1928,7 @@ export default function TableVisualizer({
 
                     {/* Popover Hover for guest name on PC */}
                     <div
-                      style={{ transform: guest ? 'none' : `rotate(${-seatRotation}deg)` }}
+                      style={{ transform: 'none' }}
                       className="absolute bottom-full mb-2 hidden group-hover/chair:block bg-slate-900/95 backdrop-blur-xs text-white text-[10px] py-1.5 px-2.5 rounded-lg whitespace-nowrap z-50 shadow-md font-sans origin-bottom"
                     >
                       <p className="font-semibold text-xs leading-tight">{guest.name}</p>

@@ -27,8 +27,8 @@ interface PdfExportButtonProps {
   guests: Guest[];
   tables: Table[];
   floorPlanRef: React.RefObject<HTMLDivElement | null>;
-  activeTab?: 'events' | 'floorplan' | 'tentcards' | 'designer' | 'style' | 'layout' | 'invitations';
-  setActiveTab?: (tab: 'events' | 'floorplan' | 'tentcards' | 'designer' | 'style' | 'layout' | 'invitations') => void;
+  activeTab?: string;
+  setActiveTab?: (tab: any) => void;
   exportTentCardsRef?: React.RefObject<(() => void) | null>;
   isExportingTentCards?: boolean;
   exportTentCardsProgress?: string;

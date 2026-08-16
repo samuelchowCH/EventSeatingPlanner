@@ -99,13 +99,16 @@ const TOTAL_STEPS = 6;
 
 const EVENT_TYPES: EventType[] = ['Wedding', 'Seminar', 'Birthday', 'Corporate', 'Other'];
 
-const TABLE_SHAPES: Array<{ value: WizardFormData['defaultTableShape']; label: string; icon: string }> = [
-  { value: 'round',     label: 'Round',    icon: '⬤' },
-  { value: 'rectangle', label: 'Rectangle', icon: '▬' },
-  { value: 'square',    label: 'Square',   icon: '■' },
-  { value: 'banquet',   label: 'Banquet',  icon: '▭' },
-  { value: 'banana',    label: 'Banana',   icon: '⌒' },
-  { value: 'nano',      label: 'Nano',     icon: '◦' },
+const TABLE_SHAPES: Array<{
+  value: 'round' | 'rectangle' | 'square' | 'banquet';
+  label: string;
+  imgOn: string;
+  imgOff: string;
+}> = [
+  { value: 'round',     label: 'Round',     imgOn: '/tables/circle_on.png',  imgOff: '/tables/circle_off.png' },
+  { value: 'rectangle', label: 'Rectangle', imgOn: '/tables/rect_on.png',    imgOff: '/tables/rect_off.png' },
+  { value: 'square',    label: 'Square',    imgOn: '/tables/squ_on.png',     imgOff: '/tables/squ_off.png' },
+  { value: 'banquet',   label: 'Banquet',   imgOn: '/tables/banquet_on.png', imgOff: '/tables/banquet_off.png' },
 ];
 
 const STEP_LABELS = [
@@ -413,17 +416,14 @@ function Step3({ form, onChange, errors }: { form: WizardFormData; onChange: (k:
 interface Step4Props {
   form: WizardFormData;
   onChange: (k: keyof WizardFormData, v: any) => void;
-  onRequestAI: () => void;
-  aiLoading: boolean;
-  aiError: string;
 }
 
-function Step4({ form, onChange, onRequestAI, aiLoading, aiError }: Step4Props) {
+function Step4({ form, onChange }: Step4Props) {
   return (
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-gilded-ink font-serif">Visual Preferences</h2>
-        <p className="text-xs text-gray-500 font-mono mt-1">Choose your venue layout mode. Optionally let AI suggest a color scheme.</p>
+        <p className="text-xs text-gray-500 font-mono mt-1">Choose your venue layout mode for this event.</p>
       </div>
 
       {/* Arena mode */}
@@ -440,72 +440,14 @@ function Step4({ form, onChange, onRequestAI, aiLoading, aiError }: Step4Props) 
                   ? 'bg-gilded-ink border-gilded-ink text-gilded-accent shadow-xs'
                   : 'bg-white border-gray-200 text-gray-600 hover:border-gilded-accent hover:text-gilded-ink'}`}
             >
-              <span className="text-2xl">{mode === 'dining' ? '🍽️' : '🎓'}</span>
-              <span className="text-xs font-serif font-bold uppercase tracking-wider">{mode === 'dining' ? 'Dining Banquet' : 'Lecture Seminar'}</span>
+              <span className="text-xs font-serif font-bold uppercase tracking-wider">{mode === 'dining' ? 'Banquet Dining' : 'Lecture Hall'}</span>
               <span className="text-[10px] text-center font-mono opacity-80">
-                {mode === 'dining' ? 'Round tables & banquet configurations' : 'Podium-facing classroom rows'}
+                {mode === 'dining' ? 'Round tables & banquet seating configurations' : 'Podium-facing classroom rows & seminar seating'}
               </span>
             </button>
           ))}
         </div>
       </Field>
-
-      {/* AI recommendations */}
-      <div className="rounded-none border border-gilded-accent/50 bg-gilded-faint p-4 space-y-3">
-        <div className="flex items-center gap-2 text-gilded-ink text-xs font-bold font-serif uppercase tracking-wider">
-          <Sparkles size={14} className="text-gilded-accent" />
-          AI Theme Suggestions <span className="text-gray-400 font-normal font-mono lowercase">(optional)</span>
-        </div>
-        <p className="text-xs text-gray-600 font-mono leading-relaxed">
-          Based on your event details, Gemini AI will recommend a color scheme and default layout setup.
-        </p>
-
-        {form.aiApplied && form.aiThemeName && (
-          <div className="rounded-none bg-white border border-gray-200 p-3 space-y-2">
-            <p className="text-xs font-bold font-serif text-emerald-800 flex items-center gap-1">
-              <Check size={13} /> Theme applied: <span className="text-gilded-ink font-bold ml-1">{form.aiThemeName}</span>
-            </p>
-            <p className="text-xs text-gray-500 font-mono italic">{form.aiSetupNotes}</p>
-            <div className="flex gap-3 mt-1 flex-wrap">
-              {[form.aiFillColor, form.aiStrokeColor, form.aiBackgroundColor].map((c, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <div className="w-4 h-4 rounded-none border border-gray-300 shadow-3xs" style={{ background: c }} />
-                  <span className="text-xs text-gray-700 font-mono font-bold">{c}</span>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                onChange('aiApplied', false);
-                onChange('aiThemeName', '');
-              }}
-              className="text-xs text-red-600 hover:underline font-mono font-bold cursor-pointer pt-1"
-            >
-              Remove theme
-            </button>
-          </div>
-        )}
-
-        {aiError && (
-          <p role="alert" aria-live="assertive" className="text-xs text-red-600 font-bold flex items-center gap-1 font-mono">
-            <AlertCircle size={13} /> {aiError}
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={onRequestAI}
-          disabled={aiLoading}
-          className="flex items-center gap-2 px-4 py-2 rounded-none bg-gilded-ink hover:bg-black text-gilded-accent text-xs font-bold font-sans uppercase tracking-wider
-            disabled:opacity-50 disabled:cursor-not-allowed border border-gilded-border transition-all cursor-pointer shadow-3xs"
-        >
-          {aiLoading
-            ? <><Loader2 size={14} className="animate-spin" /> Getting suggestions…</>
-            : <><Sparkles size={14} /> {form.aiApplied ? 'Refresh AI suggestions' : 'Get AI suggestions'}</>
-          }
-        </button>
-      </div>
     </div>
   );
 }
@@ -518,22 +460,32 @@ function Step5({ form, onChange, errors }: { form: WizardFormData; onChange: (k:
         <p className="text-xs text-gray-500 font-mono mt-1">These are initial defaults — you can customize tables individually later.</p>
       </div>
       <Field id="wizard-table-shape" label="Default Table Shape">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {TABLE_SHAPES.map(({ value, label, icon }) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={form.defaultTableShape === value}
-              onClick={() => onChange('defaultTableShape', value)}
-              className={`flex flex-col items-center gap-1 p-3 rounded-none border text-xs font-serif font-bold transition-all duration-150 cursor-pointer
-                ${form.defaultTableShape === value
-                  ? 'bg-gilded-ink border-gilded-ink text-gilded-accent shadow-xs'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-gilded-accent hover:text-gilded-ink'}`}
-            >
-              <span className="text-xl">{icon}</span>
-              <span>{label}</span>
-            </button>
-          ))}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {TABLE_SHAPES.map(({ value, label, imgOn, imgOff }) => {
+            const isSelected = form.defaultTableShape === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => onChange('defaultTableShape', value)}
+                className={`flex flex-col items-center gap-2 p-3 rounded-none border text-xs font-serif font-bold transition-all duration-150 cursor-pointer ${
+                  isSelected
+                    ? 'bg-gilded-ink border-gilded-ink text-gilded-accent shadow-xs'
+                    : 'bg-white border-gray-200 text-gray-600 hover:border-gilded-accent hover:text-gilded-ink'
+                }`}
+              >
+                <div className="w-12 h-12 flex items-center justify-center p-0.5">
+                  <img
+                    src={isSelected ? imgOn : imgOff}
+                    alt={label}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </div>
       </Field>
       <Field id="wizard-seats" label="Seats per Table" required error={errors.find(e => e.includes('Seats'))}>
@@ -570,10 +522,9 @@ function Step6Review({ form }: { form: WizardFormData }) {
     ['Venue', [form.venueName, form.venueCity].filter(Boolean).join(', ') || '—'],
     ['Guest Count', form.guestCountEstimated || '—'],
     ['Dietary Notes', form.dietaryNotes || '—'],
-    ['Layout Mode', form.arenaMode === 'dining' ? 'Dining (Round tables)' : 'Lecture (Rows)'],
+    ['Layout Mode', form.arenaMode === 'dining' ? 'Banquet Dining' : 'Lecture Hall'],
     ['Table Shape', TABLE_SHAPES.find(s => s.value === form.defaultTableShape)?.label || form.defaultTableShape],
     ['Seats per Table', form.defaultTableSeats],
-    ['AI Theme', form.aiApplied && form.aiThemeName ? form.aiThemeName : 'None'],
   ];
 
   return (
@@ -654,70 +605,6 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
     localStorage.removeItem(DRAFT_KEY);
   }, []);
 
-  // ── AI request ──────────────────────────────────────────────────────────────
-  const handleRequestAI = useCallback(async () => {
-    setAiLoading(true);
-    setAiError('');
-
-    // Snapshot form before async call — protects user data if UI is interactive
-    const snapshot = { ...form };
-
-    try {
-      const res = await fetch('/api/gemini/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: snapshot.name,
-          eventType: snapshot.eventType,
-          description: snapshot.description,
-          venueName: snapshot.venueName,
-          guestCount: snapshot.guestCountEstimated,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(err.error || `Server error ${res.status}`);
-      }
-
-      const data: AiSetupRecommendation = await res.json();
-
-      setForm(prev => {
-        const updated = { ...prev };
-        // Always update AI-specific fields
-        updated.aiThemeName = data.themeName;
-        updated.aiFillColor = data.fillColor;
-        updated.aiStrokeColor = data.strokeColor;
-        updated.aiStrokeWidth = data.strokeWidth;
-        updated.aiBackgroundColor = data.backgroundColor;
-        updated.aiGridOpacity = data.gridOpacity;
-        updated.aiSetupNotes = data.setupNotes;
-        updated.aiApplied = true;
-
-        // Only overwrite seating defaults if user hasn't touched them
-        if (!userTouched.current.has('defaultTableShape') && data.defaultTableShape) {
-          updated.defaultTableShape = data.defaultTableShape as WizardFormData['defaultTableShape'];
-        }
-        if (!userTouched.current.has('defaultTableSeats') && data.defaultTableSeats) {
-          updated.defaultTableSeats = String(data.defaultTableSeats);
-        }
-        if (!userTouched.current.has('arenaMode') && data.arenaMode) {
-          updated.arenaMode = (data.arenaMode === 'lecture' ? 'lecture' : 'dining') as 'dining' | 'lecture';
-        }
-
-        return updated;
-      });
-
-      showToast(`AI theme "${data.themeName}" applied!`, 'success');
-    } catch (err: any) {
-      const msg = err?.message || 'AI suggestions unavailable. You can still create your event manually.';
-      setAiError(msg);
-      showToast(msg, 'error');
-    } finally {
-      setAiLoading(false);
-    }
-  }, [form, showToast]);
-
   // ── Navigation ──────────────────────────────────────────────────────────────
   const goNext = () => {
     const errs = validateStep(step, form);
@@ -750,25 +637,13 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
       dietaryNotes: form.dietaryNotes || undefined,
     };
 
-    const aiTheme = form.aiApplied && form.aiThemeName
-      ? {
-          fillColor: form.aiFillColor,
-          strokeColor: form.aiStrokeColor,
-          strokeWidth: form.aiStrokeWidth,
-          backgroundColor: form.aiBackgroundColor,
-          gridOpacity: form.aiGridOpacity,
-          name: form.aiThemeName,
-        }
-      : undefined;
-
     onCreateEvent(
       form.name.trim(),
       form.date || undefined,
       metadata,
       form.defaultTableShape,
       Math.min(Math.max(Number(form.defaultTableSeats) || 8, 2), 30),
-      form.arenaMode,
-      aiTheme,
+      form.arenaMode
     );
 
     clearDraft();
@@ -810,15 +685,7 @@ export default function ProjectSetupWizard({ onCreateEvent, onCancel }: ProjectS
           {step === 1 && <Step1 form={form} onChange={handleChange} errors={errors} />}
           {step === 2 && <Step2 form={form} onChange={handleChange} />}
           {step === 3 && <Step3 form={form} onChange={handleChange} errors={errors} />}
-          {step === 4 && (
-            <Step4
-              form={form}
-              onChange={handleChange}
-              onRequestAI={handleRequestAI}
-              aiLoading={aiLoading}
-              aiError={aiError}
-            />
-          )}
+          {step === 4 && <Step4 form={form} onChange={handleChange} />}
           {step === 5 && <Step5 form={form} onChange={handleChange} errors={errors} />}
           {step === 6 && <Step6Review form={form} />}
 

@@ -267,7 +267,7 @@ export default function ControlBoard({
                     : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
-                🍽️ Banquet Dining
+                Banquet Dining
               </button>
               <button
                 type="button"
@@ -275,14 +275,13 @@ export default function ControlBoard({
                   onChangeArenaMode('lecture');
                   onChangeSeminarModeActive(false);
                 }}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                   arenaMode === 'lecture'
                     ? 'bg-gilded-ink text-white shadow-2xs font-bold'
                     : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
-                <GraduationCap size={13} />
-                <span>Lecture Hall</span>
+                Lecture Hall
               </button>
             </div>
           </div>
